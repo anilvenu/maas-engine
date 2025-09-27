@@ -1,0 +1,37 @@
+[project]
+name = "irp-batch-poc"
+version = "1.0.0"
+description = "IRP Batch Processing System POC"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp==3.9.1",
+    "alembic==1.12.1",
+    "asyncio>=4.0.0",
+    "celery==5.3.4",
+    "click==8.1.7",
+    "faker==20.1.0",
+    "fastapi==0.104.1",
+    "flower==2.0.1",
+    "httpx==0.25.2",
+    "kombu==5.3.4",
+    "prometheus-client==0.19.0",
+    "psycopg2-binary==2.9.9",
+    "pydantic==1.10.13",
+    "pytest==7.4.3",
+    "pytest-asyncio==0.21.1",
+    "pytest-cov==4.1.0",
+    "python-dotenv==1.0.0",
+    "python-json-logger==2.0.7",
+    "python-multipart==0.0.6",
+    "pyyaml==6.0.1",
+    "redis==5.0.1",
+    "sqlalchemy==2.0.23",
+    "tenacity==8.2.3",
+    "uvicorn[standard]==0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+norecursedirs = ["data", "logs", ".venv", "infrastructure", "*.egg", "dist", "build"]

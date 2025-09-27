@@ -1,0 +1,171 @@
+"""Pydantic models for API request/response schemas."""
+
+from pydantic import BaseModel, Field, validator
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+from enum import Enum
+
+
+# Enums
+class JobStatusEnum(str, Enum):
+    planned = "planned"
+    initiated = "initiated"
+    queued = "queued"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class AnalysisStatusEnum(str, Enum):
+    pending = "pending"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+# Request Models
+class AnalysisCreate(BaseModel):
+    """Request model for creating analysis."""
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    yaml_config: Optional[Dict[str, Any]] = None
+
+
+class AnalysisUpdate(BaseModel):
+    """Request model for updating analysis."""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+
+
+class ConfigurationCreate(BaseModel):
+    """Request model for creating configuration."""
+    config_name: str = Field(..., min_length=1, max_length=255)
+    config_data: Dict[str, Any]
+
+
+class ConfigurationUpdate(BaseModel):
+    """Request model for updating configuration."""
+    config_data: Dict[str, Any]
+
+
+class JobCreate(BaseModel):
+    """Request model for creating job."""
+    configuration_id: int
+
+
+class JobRetry(BaseModel):
+    """Request model for retrying job."""
+    config_override: Optional[Dict[str, Any]] = None
+
+
+class YAMLUpload(BaseModel):
+    """Request model for YAML upload."""
+    yaml_content: Dict[str, Any]
+    auto_submit: bool = True
+
+
+# Response Models
+class WorkflowStatusInfo(BaseModel):
+    """Workflow status information."""
+    workflow_id: str
+    status: str
+    progress_percentage: Optional[int] = None
+    last_polled: Optional[datetime] = None
+
+
+class JobResponse(BaseModel):
+    """Response model for job."""
+    id: int
+    analysis_id: int
+    configuration_id: int
+    workflow_id: Optional[str] = None
+    status: JobStatusEnum
+    retry_count: int
+    last_error: Optional[str] = None
+    created_ts: datetime
+    initiation_ts: Optional[datetime] = None
+    updated_ts: datetime
+    completed_ts: Optional[datetime] = None
+    age_minutes: Optional[int] = None
+    time_in_current_status_minutes: Optional[int] = None
+    
+    class Config:
+        orm_mode = True
+
+
+class JobDetailResponse(JobResponse):
+    """Detailed job response with metrics."""
+    configuration_name: Optional[str] = None
+    workflow_status: Optional[WorkflowStatusInfo] = None
+    metrics: Optional[Dict[str, Any]] = None
+    poll_count: int = 0
+    retry_history: Optional[List[Dict[str, Any]]] = None
+
+
+class ConfigurationResponse(BaseModel):
+    """Response model for configuration."""
+    id: int
+    analysis_id: int
+    config_name: str
+    config_data: Dict[str, Any]
+    is_active: bool
+    version: int
+    created_ts: datetime
+    updated_ts: datetime
+    
+    class Config:
+        orm_mode = True
+
+
+class AnalysisResponse(BaseModel):
+    """Response model for analysis."""
+    id: int
+    name: str
+    description: Optional[str] = None
+    status: AnalysisStatusEnum
+    yaml_config: Optional[Dict[str, Any]] = None
+    created_ts: datetime
+    updated_ts: datetime
+    completed_ts: Optional[datetime] = None
+    
+    class Config:
+        orm_mode = True
+
+
+class AnalysisSummaryResponse(AnalysisResponse):
+    """Analysis summary with statistics."""
+    total_jobs: int
+    job_status_counts: Dict[str, int]
+    progress_percentage: float
+    configurations: Optional[List[ConfigurationResponse]] = None
+    jobs: Optional[List[JobResponse]] = None
+
+
+class SubmissionResponse(BaseModel):
+    """Response for job submission."""
+    submitted: int
+    skipped: int
+    errors: int
+    job_ids: List[int]
+
+
+class SystemHealthResponse(BaseModel):
+    """System health status."""
+    status: str
+    database: bool
+    redis: bool
+    celery_worker: bool
+    mock_moody_api: bool
+    timestamp: datetime
+
+
+class RecoveryStatusResponse(BaseModel):
+    """Recovery status response."""
+    stale_jobs: int
+    recovered: int
+    resubmitted: int
+    resumed_polling: int
+    errors: int
+    recovery_id: Optional[int] = None
