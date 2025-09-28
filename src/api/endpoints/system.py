@@ -12,9 +12,15 @@ from src.db.session import DatabaseManager
 from src.tasks.recovery_tasks import perform_recovery_check
 from src.core.config import settings
 import redis
+from celery import Celery
+
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(prefix="/api/system", tags=["System"])
-
+celery_app = Celery(broker=settings.CELERY_BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
 
 @router.get("/health", response_model=SystemHealthResponse)
 def health_check():
@@ -31,7 +37,8 @@ def health_check():
     # Check database
     try:
         health.database = DatabaseManager.health_check()
-    except:
+    except Exception as e:
+        logger.exception(f"Database health check failed. Exception: {e}")
         health.status = "degraded"
     
     # Check Redis
@@ -39,22 +46,30 @@ def health_check():
         r = redis.Redis.from_url(settings.REDIS_URL)
         r.ping()
         health.redis = True
-    except:
+    except Exception as e:
+        logger.exception(f"Redis health check failed. Exception: {e}")
         health.status = "degraded"
     
-    # Check Celery (via Redis queue check)
+    # Check Celery workers
     try:
-        r = redis.Redis.from_url(settings.CELERY_BROKER_URL)
-        # Check if workers are registered
-        workers = r.keys("celery-task-meta-*")
-        health.celery_worker = len(workers) > 0 or r.exists("celery")
-    except:
+        insp = celery_app.control.inspect(timeout=5)  # short timeout so API doesn't hang
+        logger.info(f"Celery inspect object: {insp}")
+        stats = insp.stats()
+        if stats:
+            health.celery_worker = True
+        else:
+            health.status = "degraded"
+            health.celery_worker = False
+    except Exception as e:
+        logger.exception(f"Celery health check failed. Exception: {e}")
         health.status = "degraded"
+        health.celery_worker = False
     
     # Check Mock Moody's API
     try:
-        response = httpx.get(f"{settings.MOODY_API_BASE_URL}/", timeout=2)
-        health.mock_moody_api = response.status_code == 200
+        response = httpx.get(f"{settings.MOODY_API_BASE_URL}", timeout=2)
+        response.raise_for_status()
+        health.mock_moody_api = True
     except:
         health.status = "degraded"
     
@@ -63,26 +78,6 @@ def health_check():
         health.status = "unhealthy"
     
     return health
-
-
-@router.get("/health/ready")
-def readiness_check():
-    """Readiness probe for Kubernetes/Docker."""
-    health = health_check()
-    
-    if health.status == "unhealthy":
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="System not ready"
-        )
-    
-    return {"status": "ready"}
-
-
-@router.get("/health/live")
-def liveness_check():
-    """Liveness probe for Kubernetes/Docker."""
-    return {"status": "alive"}
 
 
 @router.post("/recovery", response_model=RecoveryStatusResponse)

@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from typing import Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 import logging
@@ -93,7 +93,7 @@ class DatabaseManager:
         """Check if database is accessible."""
         try:
             with get_db_session() as session:
-                session.execute("SELECT 1")
+                session.execute(text("SELECT 1"))
                 logger.info("Database health check passed")
                 return True
         except Exception as e:
