@@ -94,6 +94,7 @@ class DatabaseManager:
         try:
             with get_db_session() as session:
                 session.execute("SELECT 1")
+                logger.info("Database health check passed")
                 return True
         except Exception as e:
             logger.error(f"Database health check failed: {e}")

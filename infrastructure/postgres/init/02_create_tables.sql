@@ -103,19 +103,6 @@ CREATE TABLE IF NOT EXISTS irp_system_recovery (
     recovery_metadata JSONB
 );
 
--- Celery task state (for recovery)
-CREATE TABLE IF NOT EXISTS irp_celery_task_state (
-    id SERIAL PRIMARY KEY,
-    task_id VARCHAR(255) UNIQUE NOT NULL,
-    task_name VARCHAR(255) NOT NULL,
-    job_id INTEGER REFERENCES irp_job(id),
-    task_args JSONB,
-    task_kwargs JSONB,
-    eta TIMESTAMP WITH TIME ZONE,
-    expires TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create update timestamp trigger function
 CREATE OR REPLACE FUNCTION update_updated_ts_column()
 RETURNS TRIGGER AS $$

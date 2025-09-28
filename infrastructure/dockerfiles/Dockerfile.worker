@@ -1,4 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
-RUN pip install celery redis psycopg2-binary sqlalchemy
-CMD ["sleep", "infinity"]  # Temporary for testing
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["celery", "-A", "src.tasks.celery_app", "worker", "--loglevel=info", "-Q", "default,jobs,polling,recovery"]

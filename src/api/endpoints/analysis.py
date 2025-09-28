@@ -14,9 +14,10 @@ from src.services.orchestrator import Orchestrator
 from src.initiator import YAMLProcessor
 from src.core.exceptions import AnalysisNotFoundException
 
+# This router handles all analysis-related endpoints
 router = APIRouter(prefix="/api/analyses", tags=["Analysis"])
 
-
+# List all analyses with optional filtering by status
 @router.get("/", response_model=List[AnalysisResponse])
 def list_analyses(
     skip: int = 0,
@@ -28,13 +29,16 @@ def list_analyses(
     repo = AnalysisRepository(db)
     
     if status:
-        analyses = db.query(repo.model).filter(repo.model.status == status).offset(skip).limit(limit).all()
+        # Get analyses by status, ordered by ID ascending so that skip/limit works as expected
+        analyses = db.query(repo.model).filter(repo.model.status == status).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
+
     else:
-        analyses = repo.get_all(skip, limit)
-    
+        # Get all analyses with pagination
+         analyses = db.query(repo.model).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
+            
     return analyses
 
-
+# Create a new analysis
 @router.post("/", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
 def create_analysis(
     analysis: AnalysisCreate,

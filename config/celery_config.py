@@ -54,17 +54,17 @@ task_routes = {
 beat_schedule = {
     'check-analysis-completion': {
         'task': 'tasks.analysis_tasks.check_all_analyses',
-        'schedule': timedelta(minutes=2),
+        'schedule': timedelta(minutes=15),                          # Run every 15 minutes
         'options': {'queue': 'default'}
     },
     'recovery-check': {
         'task': 'tasks.recovery_tasks.perform_recovery_check',
-        'schedule': timedelta(minutes=10),
+        'schedule': timedelta(minutes=30),                          # Run every 30 minutes
         'options': {'queue': 'recovery'}
     },
     'orphan-job-detection': {
         'task': 'tasks.recovery_tasks.detect_orphan_jobs',
-        'schedule': timedelta(minutes=15),
+        'schedule': timedelta(minutes=15),                          # Run every 15 minutes
         'options': {'queue': 'recovery'}
     },
 }
@@ -72,7 +72,7 @@ beat_schedule = {
 # Beat settings
 beat_scheduler = 'celery.beat:PersistentScheduler'
 beat_schedule_filename = '/app/logs/celerybeat-schedule'
-beat_sync_every = 10  # Sync schedule to disk every 10 beats
+beat_sync_every = 100  # Sync schedule to disk every 100 beats
 
 # Monitoring
 worker_send_task_events = True  # Send events for monitoring
