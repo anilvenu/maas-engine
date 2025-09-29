@@ -50,6 +50,9 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
         try:
             # Submit to Moody's API
             with httpx.Client(timeout=settings.MOODY_API_TIMEOUT) as client:
+                logger.info(f"Submitting job {job_id} to Moody's API at {settings.MOODY_API_BASE_URL}/workflows")
+                logger.info(f"Submission data for job {job_id}: {submission_data}")
+
                 response = client.post(
                     f"{settings.MOODY_API_BASE_URL}/workflows",
                     json=submission_data

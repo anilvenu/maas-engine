@@ -16,12 +16,17 @@ class JobStatus(str, Enum):
     @classmethod
     def is_terminal(cls, status: str) -> bool:
         """Check if status is terminal (no more processing needed)."""
-        return status in [cls.COMPLETED.value, cls.FAILED.value, cls.CANCELLED.value]
+        return status in [cls.COMPLETED.value, 
+                          cls.FAILED.value, 
+                          cls.CANCELLED.value]
 
     @classmethod
     def is_active(cls, status: str) -> bool:
         """Check if status indicates active processing."""
-        return status in [cls.INITIATED.value, cls.QUEUED.value, cls.RUNNING.value]
+        return status in [cls.PLANNED.value, 
+                          cls.INITIATED.value, 
+                          cls.QUEUED.value, 
+                          cls.RUNNING.value]
 
 
 class AnalysisStatus(str, Enum):

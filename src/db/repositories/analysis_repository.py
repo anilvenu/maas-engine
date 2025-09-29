@@ -74,6 +74,8 @@ class AnalysisRepository(BaseRepository[Analysis]):
         if status in [AnalysisStatus.COMPLETED.value, AnalysisStatus.FAILED.value, 
                      AnalysisStatus.CANCELLED.value]:
             updates["completed_ts"] = datetime.now(UTC)
+        else:
+            updates["completed_ts"] = None
         
         return self.update(analysis_id, **updates)
     

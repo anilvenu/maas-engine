@@ -55,7 +55,10 @@ class Settings(BaseSettings):
     RETRY_MAX_ATTEMPTS: int = 5
     RETRY_BACKOFF_BASE: int = 2
     RETRY_BACKOFF_MAX_SECONDS: int = 300
-    
+
+    # API Key for secure endpoints
+    API_KEY: Optional[str] = None
+
     @validator("DATABASE_URL")
     def validate_postgres_url(cls, v):
         """Ensure PostgreSQL URL is properly formatted."""

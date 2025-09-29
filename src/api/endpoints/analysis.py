@@ -5,6 +5,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from src.api.dependencies.database import get_db
+from src.api.dependencies.auth import verify_api_key
+
 from src.api.models.schemas import (
     AnalysisCreate, AnalysisUpdate, AnalysisResponse, 
     AnalysisSummaryResponse, SubmissionResponse, YAMLUpload
@@ -39,7 +41,10 @@ def list_analyses(
     return analyses
 
 # Create a new analysis
-@router.post("/", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", 
+             response_model=AnalysisResponse, 
+             status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(verify_api_key)])
 def create_analysis(
     analysis: AnalysisCreate,
     db: Session = Depends(get_db)
@@ -57,7 +62,9 @@ def create_analysis(
     return db_analysis
 
 
-@router.post("/from-yaml", response_model=AnalysisSummaryResponse)
+@router.post("/from-yaml", 
+             response_model=AnalysisSummaryResponse,
+             dependencies=[Depends(verify_api_key)])
 def create_from_yaml(
     yaml_data: YAMLUpload,
     db: Session = Depends(get_db)
@@ -102,7 +109,9 @@ def get_analysis(
     return summary
 
 
-@router.put("/{analysis_id}", response_model=AnalysisResponse)
+@router.put("/{analysis_id}", 
+            response_model=AnalysisResponse,
+            dependencies=[Depends(verify_api_key)])
 def update_analysis(
     analysis_id: int,
     analysis_update: AnalysisUpdate,
@@ -125,7 +134,9 @@ def update_analysis(
     return updated
 
 
-@router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{analysis_id}", 
+               status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(verify_api_key)])
 def delete_analysis(
     analysis_id: int,
     db: Session = Depends(get_db)
@@ -140,7 +151,9 @@ def delete_analysis(
         )
 
 
-@router.post("/{analysis_id}/submit", response_model=SubmissionResponse)
+@router.post("/{analysis_id}/submit", 
+             response_model=SubmissionResponse,
+             dependencies=[Depends(verify_api_key)])
 def submit_analysis_jobs(
     analysis_id: int,
     db: Session = Depends(get_db)
@@ -158,7 +171,8 @@ def submit_analysis_jobs(
         )
 
 
-@router.post("/{analysis_id}/cancel")
+@router.post("/{analysis_id}/cancel",
+             dependencies=[Depends(verify_api_key)])
 def cancel_analysis(
     analysis_id: int,
     db: Session = Depends(get_db)

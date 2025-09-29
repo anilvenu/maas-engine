@@ -7,6 +7,8 @@ import httpx
 from sqlalchemy.orm import Session
 
 from src.api.dependencies.database import get_db
+from src.api.dependencies.auth import verify_api_key
+
 from src.api.models.schemas import SystemHealthResponse, RecoveryStatusResponse
 from src.db.session import DatabaseManager
 from src.tasks.recovery_tasks import perform_recovery_check
@@ -30,7 +32,7 @@ def health_check():
         database=False,
         redis=False,
         celery_worker=False,
-        mock_moody_api=False,
+        moody_api=False,
         timestamp=datetime.now(UTC)
     )
     
@@ -69,7 +71,7 @@ def health_check():
     try:
         response = httpx.get(f"{settings.MOODY_API_BASE_URL}", timeout=2)
         response.raise_for_status()
-        health.mock_moody_api = True
+        health.moodys_api = True
     except:
         health.status = "degraded"
     
@@ -80,7 +82,9 @@ def health_check():
     return health
 
 
-@router.post("/recovery", response_model=RecoveryStatusResponse)
+@router.post("/recovery", 
+             response_model=RecoveryStatusResponse,
+             dependencies=[Depends(verify_api_key)])
 def trigger_recovery():
     """Manually trigger recovery process."""
     task = perform_recovery_check.delay()

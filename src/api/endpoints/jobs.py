@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 
 from src.api.dependencies.database import get_db
+from src.api.dependencies.auth import verify_api_key
+
 from src.api.models.schemas import (
     JobCreate, JobResponse, JobDetailResponse, JobRetry
 )
@@ -45,7 +47,9 @@ def list_jobs(
     return jobs
 
 
-@router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=JobResponse, 
+             status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(verify_api_key)])
 def create_job(
     analysis_id: int,
     job: JobCreate,
@@ -100,7 +104,8 @@ def get_job(
     return response
 
 
-@router.post("/{job_id}/initiate")
+@router.post("/{job_id}/initiate", 
+             dependencies=[Depends(verify_api_key)])
 def initiate_job(
     job_id: int,
     db: Session = Depends(get_db)
@@ -131,7 +136,8 @@ def initiate_job(
     }
 
 
-@router.post("/{job_id}/cancel")
+@router.post("/{job_id}/cancel", 
+             dependencies=[Depends(verify_api_key)])
 def cancel_job_endpoint(
     job_id: int,
     db: Session = Depends(get_db)
@@ -162,7 +168,8 @@ def cancel_job_endpoint(
     }
 
 
-@router.post("/{job_id}/retry", response_model=JobResponse)
+@router.post("/{job_id}/retry", response_model=JobResponse,
+             dependencies=[Depends(verify_api_key)])
 def retry_job(
     job_id: int,
     retry_config: JobRetry,
@@ -190,7 +197,8 @@ def retry_job(
         )
 
 
-@router.post("/{job_id}/poll")
+@router.post("/{job_id}/poll", 
+             dependencies=[Depends(verify_api_key)])
 def force_poll_job(
     job_id: int,
     db: Session = Depends(get_db)

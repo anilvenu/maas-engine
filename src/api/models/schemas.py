@@ -157,7 +157,7 @@ class SystemHealthResponse(BaseModel):
     database: bool
     redis: bool
     celery_worker: bool
-    mock_moody_api: bool
+    moodys_api: bool
     timestamp: datetime
 
 

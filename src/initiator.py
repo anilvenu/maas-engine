@@ -30,7 +30,7 @@ class YAMLProcessor:
         self.orchestrator = Orchestrator()
         self.logger = logger
     
-    def validate_yaml(self, yaml_data: Dict[str, Any]) -> bool:
+    def _validate_yaml(self, yaml_data: Dict[str, Any]) -> bool:
         """
         Validate YAML structure.
         
@@ -72,33 +72,7 @@ class YAMLProcessor:
                 raise ConfigurationException(f"Configuration {i} missing 'model'")
         
         return True
-    
-    def process_yaml_file(self, yaml_path: str, 
-                         auto_submit: bool = True) -> Dict[str, Any]:
-        """
-        Process YAML file and create analysis with jobs.
-        
-        Args:
-            yaml_path: Path to YAML file
-            auto_submit: Automatically submit jobs after creation
-            
-        Returns:
-            Dict with processing results
-        """
-        self.logger.info(f"Processing YAML file: {yaml_path}")
-        
-        # Read and parse YAML
-        try:
-            with open(yaml_path, 'r') as f:
-                yaml_data = yaml.safe_load(f)
-        except Exception as e:
-            raise ConfigurationException(f"Failed to read YAML file: {e}")
-        
-        # Validate YAML
-        self.validate_yaml(yaml_data)
-        
-        # Process YAML data
-        return self.process_yaml_data(yaml_data, auto_submit)
+
     
     def process_yaml_data(self, yaml_data: Dict[str, Any], 
                          auto_submit: bool = True) -> Dict[str, Any]:
@@ -168,60 +142,33 @@ class YAMLProcessor:
                 results["status"] = "submitted"
             
             return results
-    
-    def process_directory(self, directory_path: str, 
-                         pattern: str = "*.yaml",
+
+    def process_yaml_file(self, yaml_path: str, 
                          auto_submit: bool = True) -> Dict[str, Any]:
         """
-        Process all YAML files in a directory.
+        Process YAML file and create analysis with jobs.
         
         Args:
-            directory_path: Path to directory containing YAML files
-            pattern: File pattern to match
+            yaml_path: Path to YAML file
             auto_submit: Automatically submit jobs after creation
             
         Returns:
-            Dict with processing results for all files
+            Dict with processing results
         """
-        path = Path(directory_path)
-        if not path.exists() or not path.is_dir():
-            raise ConfigurationException(f"Directory {directory_path} not found")
+        self.logger.info(f"Processing YAML file: {yaml_path}")
         
-        yaml_files = list(path.glob(pattern))
-        if not yaml_files:
-            self.logger.warning(f"No YAML files found in {directory_path}")
-            return {"files_processed": 0, "results": []}
+        # Read and parse YAML
+        try:
+            with open(yaml_path, 'r') as f:
+                yaml_data = yaml.safe_load(f)
+        except Exception as e:
+            raise ConfigurationException(f"Failed to read YAML file: {e}")
         
-        results = {
-            "files_processed": 0,
-            "total_analyses": 0,
-            "total_jobs": 0,
-            "results": []
-        }
+        # Validate YAML
+        self._validate_yaml(yaml_data)
         
-        for yaml_file in yaml_files:
-            try:
-                self.logger.info(f"Processing {yaml_file}")
-                result = self.process_yaml_file(str(yaml_file), auto_submit)
-                
-                results["files_processed"] += 1
-                results["total_analyses"] += 1
-                results["total_jobs"] += result["jobs_created"]
-                results["results"].append({
-                    "file": str(yaml_file),
-                    "success": True,
-                    "result": result
-                })
-                
-            except Exception as e:
-                self.logger.error(f"Error processing {yaml_file}: {e}")
-                results["results"].append({
-                    "file": str(yaml_file),
-                    "success": False,
-                    "error": str(e)
-                })
-        
-        return results
+        # Process YAML data
+        return self.process_yaml_data(yaml_data, auto_submit)
 
 
 def main():
@@ -230,24 +177,17 @@ def main():
     
     parser = argparse.ArgumentParser(description="Process YAML and create analysis with jobs")
     parser.add_argument("yaml_path", help="Path to YAML file or directory")
-    parser.add_argument("--no-submit", action="store_true", help="Don't auto-submit jobs")
-    parser.add_argument("--directory", action="store_true", help="Process all YAML files in directory")
+    parser.add_argument("--submit", action="store_true", help="Submit jobs after creation")
     
     args = parser.parse_args()
     
     processor = YAMLProcessor()
     
     try:
-        if args.directory:
-            results = processor.process_directory(
-                args.yaml_path,
-                auto_submit=not args.no_submit
-            )
-        else:
-            results = processor.process_yaml_file(
-                args.yaml_path,
-                auto_submit=not args.no_submit
-            )
+        results = processor.process_yaml_file(
+            args.yaml_path,
+            auto_submit = args.submit
+        )
         
         print(f"\nProcessing complete:")
         print(f"Results: {results}")

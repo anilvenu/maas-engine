@@ -191,6 +191,14 @@ class Orchestrator:
             new_job.parent_job_id = original_job.id
             db.commit()
             
+            # Update the analysis to running if needed
+            if original_job.analysis.status != AnalysisStatus.RUNNING.value:
+                logger.info(f"Updating analysis {original_job.analysis_id} status to running")
+                analysis_repo = AnalysisRepository(db)
+                analysis_repo.update_status(original_job.analysis_id, AnalysisStatus.RUNNING.value)
+            else:
+                logger.info(f"Analysis {original_job.analysis_id} already running")
+
             # Submit new job
             submit_job.delay(new_job.id)
             

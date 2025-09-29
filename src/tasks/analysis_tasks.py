@@ -33,6 +33,7 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
         
         # Skip if already terminal
         if AnalysisStatus.is_terminal(analysis.status):
+            logger.info(f"Analysis {analysis_id} already in terminal state: {analysis.status}")
             return {"status": analysis.status, "terminal": True}
         
         # Get all jobs for this analysis
@@ -73,7 +74,7 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
         
         # All jobs are terminal
         if status_counts["completed"] == status_counts["total"]:
-            # All completed successfully
+            # All completed successfully --> set analysis to completed
             analysis.status = AnalysisStatus.COMPLETED.value
             analysis.completed_ts = datetime.now(UTC)
             db.commit()
@@ -81,7 +82,7 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
             return {"status": "completed", "counts": status_counts}
         
         elif status_counts["failed"] > 0:
-            # Some jobs failed
+            # Some jobs failed --> set analysis to failed
             analysis.status = AnalysisStatus.FAILED.value
             analysis.completed_ts = datetime.now(UTC)
             db.commit()
@@ -89,7 +90,7 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
             return {"status": "failed", "counts": status_counts}
         
         elif status_counts["cancelled"] == status_counts["total"]:
-            # All jobs cancelled
+            # All jobs cancelled --> set analysis to cancelled
             analysis.status = AnalysisStatus.CANCELLED.value
             analysis.completed_ts = datetime.now(UTC)
             db.commit()
@@ -97,7 +98,7 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
             return {"status": "cancelled", "counts": status_counts}
         
         else:
-            # Mixed terminal states (some completed, some cancelled)
+            # Mixed terminal states (some completed, some cancelled) --> set to completed
             analysis.status = AnalysisStatus.COMPLETED.value
             analysis.completed_ts = datetime.now(UTC)
             db.commit()
