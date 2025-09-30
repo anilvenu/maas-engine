@@ -143,8 +143,8 @@ class RecoveryService:
                 Job.updated_ts < stale_threshold
             ).count()
             
-            # Check for stuck analyses
-            stuck_analyses = db.query(Analysis).filter(
+            # Check for stuck analysis
+            stuck_analysis = db.query(Analysis).filter(
                 Analysis.status == AnalysisStatus.RUNNING.value,
                 Analysis.updated_ts < stale_threshold
             ).count()
@@ -169,9 +169,9 @@ class RecoveryService:
                 issues.append(f"{stale_jobs} stale jobs detected")
                 recommendations.append("Run recovery to resume stale jobs")
             
-            if stuck_analyses > 0:
+            if stuck_analysis > 0:
                 health_status = "degraded"
-                issues.append(f"{stuck_analyses} stuck analyses detected")
+                issues.append(f"{stuck_analysis} stuck analysis detected")
                 recommendations.append("Check analysis completion logic")
             
             if recent_failures > 10:
@@ -182,7 +182,7 @@ class RecoveryService:
             return {
                 "status": health_status,
                 "stale_jobs": stale_jobs,
-                "stuck_analyses": stuck_analyses,
+                "stuck_analysis": stuck_analysis,
                 "recent_failures": recent_failures,
                 "last_recovery": {
                     "timestamp": last_recovery.started_at.isoformat() if last_recovery else None,

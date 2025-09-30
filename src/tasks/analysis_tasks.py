@@ -106,19 +106,19 @@ def check_analysis_completion(analysis_id: int) -> Dict[str, Any]:
             return {"status": "completed_with_cancellations", "counts": status_counts}
 
 
-@celery.task(name='src.tasks.analysis_tasks.check_all_analyses')
-def check_all_analyses() -> Dict[str, Any]:
+@celery.task(name='src.tasks.analysis_tasks.check_all_analysis')
+def check_all_analysis() -> Dict[str, Any]:
     """
-    Periodic task to check all running analyses.
+    Periodic task to check all running analysis.
     
     Returns:
-        Dict with summary of checked analyses
+        Dict with summary of checked analysis
     """
-    logger.info("Checking all running analyses")
+    logger.info("Checking all running analysis")
     
     with get_db_session() as db:
-        # Get all non-terminal analyses
-        running_analyses = db.query(Analysis).filter(
+        # Get all non-terminal analysis
+        running_analysis = db.query(Analysis).filter(
             Analysis.status.in_([AnalysisStatus.PENDING.value, AnalysisStatus.RUNNING.value])
         ).all()
         
@@ -129,7 +129,7 @@ def check_all_analyses() -> Dict[str, Any]:
             "still_running": 0
         }
         
-        for analysis in running_analyses:
+        for analysis in running_analysis:
             result = check_analysis_completion(analysis.id)
             results["checked"] += 1
             

@@ -145,7 +145,15 @@ class Orchestrator:
                         config_override: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Retry a failed job.
-        
+
+        Retrying a job involves the following steps:
+            1. Create a new configuration if override provided
+            2. Create a new job with the same analysis and configuration
+            3. Set the parent job reference
+            4. Update the original job to cancelled
+            5. Update the analysis to running if needed
+            6. Submit the new job
+
         Args:
             job_id: Job ID to retry
             config_override: Optional configuration override
@@ -169,9 +177,10 @@ class Orchestrator:
                 raise InvalidStatusTransitionException(
                     f"Can only retry failed or cancelled jobs, current status: {original_job.status}"
                 )
-            
+                        
             # Create new configuration if override provided
             if config_override:
+                logger.info(f"Creating new configuration {original_job.configuration.config_name}_retry for job {job_id} retry")
                 config = config_repo.create_configuration(
                     original_job.analysis_id,
                     f"{original_job.configuration.config_name}_retry",
@@ -179,6 +188,8 @@ class Orchestrator:
                 )
                 config_id = config.id
             else:
+                # Use original configuration if no override provided
+                logger.info(f"Using original configuration {original_job.configuration_id} for job {job_id} retry")
                 config_id = original_job.configuration_id
             
             # Create new job
@@ -186,11 +197,15 @@ class Orchestrator:
                 original_job.analysis_id,
                 config_id
             )
+            logger.info(f"Created new job {new_job.id} for job {job_id} retry")
             
             # Set parent reference
             new_job.parent_job_id = original_job.id
-            db.commit()
-            
+
+            # Update the original job to cancelled
+            job_repo.update_status(original_job.id, JobStatus.CANCELLED.value)
+            logger.info(f"Updated original job {original_job.id} status to cancelled")
+
             # Update the analysis to running if needed
             if original_job.analysis.status != AnalysisStatus.RUNNING.value:
                 logger.info(f"Updating analysis {original_job.analysis_id} status to running")
@@ -199,8 +214,11 @@ class Orchestrator:
             else:
                 logger.info(f"Analysis {original_job.analysis_id} already running")
 
+            db.commit()
+
             # Submit new job
             submit_job.delay(new_job.id)
+            logger.info(f"Submitted new job {new_job.id} for job {job_id} retry")
             
             return {
                 "original_job_id": job_id,
@@ -240,27 +258,9 @@ class Orchestrator:
                     "status": job.status,
                     "workflow_id": job.workflow_id,
                     "metrics": metrics
-                })
-            
-            # Calculate progress percentage
-            total_jobs = len(jobs)
-            completed_jobs = sum(1 for j in jobs if j.status == 'completed')
-            cancelled_jobs = sum(1 for j in jobs if j.status == 'cancelled')
-            failed_jobs = sum(1 for j in jobs if j.status == 'failed')
-
-            print(f"Total jobs: {total_jobs}")  # Debugging line
-            print(f"Completed jobs: {completed_jobs}")  # Debugging line
-            print(f"Cancelled jobs: {cancelled_jobs}")  # Debugging line
-            print(f"Failed jobs: {failed_jobs}")  # Debugging line
-
-            progress_percentage = (completed_jobs / total_jobs * 100) if total_jobs > 0 else 0
-
-            
+                })         
+           
             return {
                 "analysis": summary,
                 "jobs": job_details,
-                "total_jobs": total_jobs,
-                "completed_jobs": completed_jobs,
-                "cancelled_jobs": cancelled_jobs,
-                "failed_jobs": failed_jobs
             }

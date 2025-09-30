@@ -57,7 +57,7 @@ Periodic Tasks (Celery Beat)
 
 | Task                     | Schedule         |
 | ------------------------ | ---------------- |
-| `check_all_analyses`     | Every 30 minutes |
+| `check_all_analysis`     | Every 30 minutes |
 | `perform_recovery_check` | Every 60 minutes |
 
 
@@ -117,14 +117,14 @@ Analysis tasks roll up job statuses to determine the overall state of an analysi
 
 This ensures analysis status always reflects the current state of its jobs.
 
-3.2. check_all_analyses()
+3.2. check_all_analysis()
 
 | Aspect      | Description                                                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Purpose     | Periodic sweep of all non-terminal analyses.                                                                                                 |
+| Purpose     | Periodic sweep of all non-terminal analysis.                                                                                                 |
 | Input       | None.                                                                                                                                        |
 | Output      | Summary dict (`checked`, `completed`, `failed`, `still_running`).                                                                            |
-| Key Actions | - Find analyses with status `pending` or `running`. <br> - Call `check_analysis_completion` for each. <br> - Aggregate results into summary. |
+| Key Actions | - Find analysis with status `pending` or `running`. <br> - Call `check_analysis_completion` for each. <br> - Aggregate results into summary. |
 
 Runs periodically to ensure system-wide consistency of analysis states.
 
@@ -152,7 +152,7 @@ Analysis Evaluation
 check_analysis_completion rolls up job statuses.
 
 Automation
-check_all_analyses runs periodically to catch missed analyses.
+check_all_analysis runs periodically to catch missed analysis.
 
 Cancellation (Optional)
 cancel_job allows operators to manually stop a workflow.

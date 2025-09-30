@@ -17,28 +17,28 @@ from src.initiator import YAMLProcessor
 from src.core.exceptions import AnalysisNotFoundException
 
 # This router handles all analysis-related endpoints
-router = APIRouter(prefix="/api/analyses", tags=["Analysis"])
+router = APIRouter(prefix="/api/analysis", tags=["Analysis"])
 
-# List all analyses with optional filtering by status
+# List all analysis with optional filtering by status
 @router.get("/", response_model=List[AnalysisResponse])
-def list_analyses(
+def list_analysis(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """List all analyses with optional filtering."""
+    """List all analysis with optional filtering."""
     repo = AnalysisRepository(db)
     
     if status:
-        # Get analyses by status, ordered by ID ascending so that skip/limit works as expected
-        analyses = db.query(repo.model).filter(repo.model.status == status).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
+        # Get analysis by status, ordered by ID ascending so that skip/limit works as expected
+        analysis = db.query(repo.model).filter(repo.model.status == status).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
 
     else:
-        # Get all analyses with pagination
-         analyses = db.query(repo.model).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
+        # Get all analysis with pagination
+         analysis = db.query(repo.model).order_by(repo.model.id.asc()).offset(skip).limit(limit).all()
             
-    return analyses
+    return analysis
 
 # Create a new analysis
 @router.post("/from-yaml", 

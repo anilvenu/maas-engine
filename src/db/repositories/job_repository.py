@@ -133,11 +133,6 @@ class JobRepository(BaseRepository[Job]):
         }
         
         if job.created_ts:
-            print("Job created timestamp:")  # Debugging line
-            print(job.created_ts)  # Debugging line
-            print("Current UTC time:")  # Debugging line
-            print(datetime.now(UTC))  # Debugging line
-
             age = datetime.now(UTC) - job.created_ts
             metrics["age_minutes"] = int(age.total_seconds() / 60)
         

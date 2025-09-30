@@ -70,7 +70,7 @@ from celery.schedules import crontab
 
 celery.conf.beat_schedule = {
     'check-analysis-completion': {
-        'task': 'src.tasks.analysis_tasks.check_all_analyses',
+        'task': 'src.tasks.analysis_tasks.check_all_analysis',
         'schedule': crontab(minute='*/2'),  # Every 2 minutes
     },
     'recovery-check': {

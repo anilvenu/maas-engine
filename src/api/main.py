@@ -87,7 +87,7 @@ def root():
         "status": "running",
         "timestamp": datetime.now(UTC),
         "endpoints": {
-            "analyses": "/api/analyses",
+            "analysis": "/api/analysis",
             "jobs": "/api/jobs",
             "system": "/api/system",
             "health": "/api/system/health",
@@ -104,7 +104,7 @@ def api_info():
         "version": "1.0.0",
         "endpoints": [
             {
-                "path": "/api/analyses",
+                "path": "/api/analysis",
                 "description": "Analysis management"
             },
             {

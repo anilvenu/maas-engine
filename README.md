@@ -96,7 +96,7 @@ Max poll duration: configurable
 **Analysis Completion Check**
 
 Runs every N minutes via Celery Beat
-Checks all "running" analyses
+Checks all "running" analysis
 Updates to "completed" when all non-cancelled jobs are finished
 
 Edge cases:
@@ -288,7 +288,7 @@ uv run python scripts/test_celery.py
 
 ## Core Application
 
-wires together repositories, services, and processors into a job orchestration system. The goal is to transform YAML-defined analyses into persisted database entities, spawn jobs, orchestrate execution, and monitor progress through completion.
+wires together repositories, services, and processors into a job orchestration system. The goal is to transform YAML-defined analysis into persisted database entities, spawn jobs, orchestrate execution, and monitor progress through completion.
 
 - Repository layer
 - Orchestrator service
@@ -306,10 +306,10 @@ Repositories encapsulate all database access logic and provide a clean, testable
 
 Focuses on Analysis lifecycle:
 
-- Retrieve analyses with jobs.
-- Get active analyses (pending, running).
+- Retrieve analysis with jobs.
+- Get active analysis (pending, running).
 - Produce analysis summaries including job counts per status.
-- Create new analyses from YAML.
+- Create new analysis from YAML.
 - Update status and mark completion timestamps.
 - Cancel an analysis and cascade cancel jobs.
 
@@ -396,7 +396,7 @@ curl http://localhost:8001/mock/stats
 
 API Endpoints:
 
-Analysis: /api/analyses - Full CRUD, submit jobs, track progress
+Analysis: /api/analysis - Full CRUD, submit jobs, track progress
 Jobs: /api/jobs - Create, initiate, cancel, retry, force poll
 System: /api/system - Health checks, recovery, statistics
 
@@ -405,7 +405,7 @@ Key Features:
 
 Complete REST API for all operations
 Auto-generated documentation (Swagger UI)
-Real-time monitoring of jobs and analyses
+Real-time monitoring of jobs and analysis
 Health checks for all system components
 YAML upload directly via API
 Progress tracking with percentages and metrics

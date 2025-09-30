@@ -43,7 +43,7 @@ async def test_api():
         }
         
         response = await client.post(
-            f"{base_url}/api/analyses/from-yaml",
+            f"{base_url}/api/analysis/from-yaml",
             json=yaml_data
         )
         if response.status_code == 200:
@@ -56,19 +56,19 @@ async def test_api():
         
         # 3. Get analysis details
         print("\n3. Getting analysis details...")
-        response = await client.get(f"{base_url}/api/analyses/{analysis_id}")
+        response = await client.get(f"{base_url}/api/analysis/{analysis_id}")
         print(f"   Status: {response.json()['status']}")
         print(f"   Jobs: {response.json()['total_jobs']}")
         
         # 4. Submit jobs
         print("\n4. Submitting jobs...")
-        response = await client.post(f"{base_url}/api/analyses/{analysis_id}/submit")
+        response = await client.post(f"{base_url}/api/analysis/{analysis_id}/submit")
         print(f"   Submission result: {response.json()}")
         
         # 5. Get progress
         print("\n5. Getting progress...")
         await asyncio.sleep(2)  # Wait for processing
-        response = await client.get(f"{base_url}/api/analyses/{analysis_id}/progress")
+        response = await client.get(f"{base_url}/api/analysis/{analysis_id}/progress")
         progress = response.json()
         print(f"   Progress: {progress}")
         
@@ -83,7 +83,7 @@ async def test_api():
         print("\n7. Getting system stats...")
         response = await client.get(f"{base_url}/api/system/stats")
         stats = response.json()
-        print(f"   Analyses: {stats['analyses']}")
+        print(f"   Analysis: {stats['analysis']}")
         print(f"   Jobs: {stats['jobs']}")
         
         print("\n=== API Test Complete ===\n")

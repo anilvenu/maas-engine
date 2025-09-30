@@ -129,7 +129,7 @@ def get_system_stats(db: Session = Depends(get_db)):
     from src.db.models import Analysis, Job, Configuration
     
     stats = {
-        "analyses": {
+        "analysis": {
             "total": db.query(Analysis).count(),
             "pending": db.query(Analysis).filter(Analysis.status == "pending").count(),
             "running": db.query(Analysis).filter(Analysis.status == "running").count(),

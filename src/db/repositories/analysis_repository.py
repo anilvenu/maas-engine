@@ -22,8 +22,8 @@ class AnalysisRepository(BaseRepository[Analysis]):
             .filter(Analysis.id == analysis_id)\
             .first()
     
-    def get_active_analyses(self) -> List[Analysis]:
-        """Get all non-terminal analyses."""
+    def get_active_analysis(self) -> List[Analysis]:
+        """Get all non-terminal analysis."""
         return self.db.query(Analysis)\
             .filter(Analysis.status.in_(['pending', 'running']))\
             .all()
@@ -43,7 +43,10 @@ class AnalysisRepository(BaseRepository[Analysis]):
         progress_percentage = 0.0
         if jobs:
             completed_jobs = status_counts.get('completed', 0)
-            progress_percentage = (completed_jobs / len(jobs)) * 100
+            cancelled_jobs = status_counts.get('cancelled', 0)
+
+            # Consider both completed and cancelled jobs as progress
+            progress_percentage = (completed_jobs + cancelled_jobs) / len(jobs) * 100
 
         return {
             "id": analysis.id,
