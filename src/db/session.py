@@ -1,4 +1,24 @@
-"""Database session management."""
+"""Database session management.
+
+Handles connection pooling, session creation, and transaction management.
+Provides utilities for both FastAPI dependency injection and standalone scripts.
+
+Key Features:
+- Connection pooling with configurable parameters.
+- Session management with context managers.
+- Transaction management with automatic commit/rollback.
+- Health check utility for database connectivity.
+- Logging for database operations and errors.
+- Initialization function to create tables if they don't exist.
+- Configurable via environment variables or settings module.
+
+Usage:
+- Use `get_db` as a FastAPI dependency to get a session per request.
+- Use `get_db_session` context manager in Celery tasks or scripts.
+- Use `DatabaseManager` for executing functions within transactions.
+- Call `init_db()` at application startup to ensure tables are created.
+- Call `DatabaseManager.health_check()` to verify database connectivity.
+"""
 
 from contextlib import contextmanager
 from typing import Generator

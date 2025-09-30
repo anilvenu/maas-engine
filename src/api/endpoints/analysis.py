@@ -88,31 +88,6 @@ def get_analysis(
     return summary
 
 
-@router.put("/{analysis_id}", 
-            response_model=AnalysisResponse,
-            dependencies=[Depends(verify_api_key)])
-def update_analysis(
-    analysis_id: int,
-    analysis_update: AnalysisUpdate,
-    db: Session = Depends(get_db)
-):
-    """Update analysis metadata."""
-    repo = AnalysisRepository(db)
-    
-    updated = repo.update(
-        analysis_id,
-        **analysis_update.dict(exclude_unset=True)
-    )
-    
-    if not updated:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Analysis {analysis_id} not found"
-        )
-    
-    return updated
-
-
 @router.delete("/{analysis_id}", 
                status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(verify_api_key)])

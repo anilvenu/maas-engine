@@ -26,19 +26,6 @@ class AnalysisStatusEnum(str, Enum):
 
 
 # Request Models
-class AnalysisCreate(BaseModel):
-    """Request model for creating analysis."""
-    name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
-    yaml_config: Optional[Dict[str, Any]] = None
-
-
-class AnalysisUpdate(BaseModel):
-    """Request model for updating analysis."""
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-
-
 class ConfigurationCreate(BaseModel):
     """Request model for creating configuration."""
     config_name: str = Field(..., min_length=1, max_length=255)
