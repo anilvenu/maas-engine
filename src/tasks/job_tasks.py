@@ -49,12 +49,12 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
         
         try:
             # Submit to Moody's API
-            with httpx.Client(timeout=settings.MOODY_API_TIMEOUT) as client:
-                logger.info(f"Submitting job {job_id} to Moody's API at {settings.MOODY_API_BASE_URL}/workflows")
+            with httpx.Client(timeout=settings.MOODYS_API_TIMEOUT) as client:
+                logger.info(f"Submitting job {job_id} to Moody's API at {settings.MOODYS_API_BASE_URL}/workflows")
                 logger.info(f"Submission data for job {job_id}: {submission_data}")
 
                 response = client.post(
-                    f"{settings.MOODY_API_BASE_URL}/workflows",
+                    f"{settings.MOODYS_API_BASE_URL}/workflows",
                     json=submission_data
                 )
                 response.raise_for_status()
@@ -148,9 +148,9 @@ def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
         
         try:
             # Poll Moody's API
-            with httpx.Client(timeout=settings.MOODY_API_TIMEOUT) as client:
+            with httpx.Client(timeout=settings.MOODYS_API_TIMEOUT) as client:
                 response = client.get(
-                    f"{settings.MOODY_API_BASE_URL}/workflows/{workflow_id}/status"
+                    f"{settings.MOODYS_API_BASE_URL}/workflows/{workflow_id}/status"
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -270,9 +270,9 @@ def cancel_job(job_id: int) -> Dict[str, Any]:
         
         try:
             # Call Moody's cancel API
-            with httpx.Client(timeout=settings.MOODY_API_TIMEOUT) as client:
+            with httpx.Client(timeout=settings.MOODYS_API_TIMEOUT) as client:
                 response = client.post(
-                    f"{settings.MOODY_API_BASE_URL}/workflows/{job.workflow_id}/cancel"
+                    f"{settings.MOODYS_API_BASE_URL}/workflows/{job.workflow_id}/cancel"
                 )
                 response.raise_for_status()
                 result = response.json()

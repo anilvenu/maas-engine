@@ -69,7 +69,7 @@ def health_check():
     
     # Check Moody's API
     try:
-        response = httpx.get(f"{settings.MOODY_API_BASE_URL}", timeout=2)
+        response = httpx.get(f"{settings.MOODYS_API_BASE_URL}", timeout=2)
         response.raise_for_status()
         health.moodys_api = True
     except:

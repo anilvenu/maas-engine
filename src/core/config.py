@@ -35,10 +35,10 @@ class Settings(BaseSettings):
     CELERY_TASK_SOFT_TIME_LIMIT: int = 240  # 4 minutes
     
     # Moody's API Configuration
-    MOODY_API_BASE_URL: str = "http://localhost:8001/mock"
-    MOODY_API_TIMEOUT: int = 30
-    MOODY_API_MAX_RETRIES: int = 5
-    MOODY_API_RETRY_BACKOFF: int = 2
+    MOODYS_API_BASE_URL: str = "http://irp-mock-moodys:8001/mock"
+    MOODYS_API_TIMEOUT: int = 30
+    MOODYS_API_MAX_RETRIES: int = 5
+    MOODYS_API_RETRY_BACKOFF: int = 2
     
     # Polling Configuration
     POLL_INITIAL_DELAY_SECONDS: int = 30

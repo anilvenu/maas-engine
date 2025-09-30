@@ -114,9 +114,9 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
         
         # Poll Moody's API to get current status
         try:
-            with httpx.Client(timeout=settings.MOODY_API_TIMEOUT) as client:
+            with httpx.Client(timeout=settings.MOODYS_API_TIMEOUT) as client:
                 response = client.get(
-                    f"{settings.MOODY_API_BASE_URL}/workflows/{job.workflow_id}/status"
+                    f"{settings.MOODYS_API_BASE_URL}/workflows/{job.workflow_id}/status"
                 )
                 
                 if response.status_code == 404:
