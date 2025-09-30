@@ -41,27 +41,6 @@ def list_analyses(
     return analyses
 
 # Create a new analysis
-@router.post("/", 
-             response_model=AnalysisResponse, 
-             status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(verify_api_key)])
-def create_analysis(
-    analysis: AnalysisCreate,
-    db: Session = Depends(get_db)
-):
-    """Create a new analysis."""
-    repo = AnalysisRepository(db)
-    
-    db_analysis = repo.create(
-        name=analysis.name,
-        description=analysis.description,
-        yaml_config=analysis.yaml_config,
-        status="pending"
-    )
-    
-    return db_analysis
-
-
 @router.post("/from-yaml", 
              response_model=AnalysisSummaryResponse,
              dependencies=[Depends(verify_api_key)])

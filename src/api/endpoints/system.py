@@ -32,7 +32,7 @@ def health_check():
         database=False,
         redis=False,
         celery_worker=False,
-        moody_api=False,
+        moodys_api=False,
         timestamp=datetime.now(UTC)
     )
     
@@ -67,7 +67,7 @@ def health_check():
         health.status = "degraded"
         health.celery_worker = False
     
-    # Check Mock Moody's API
+    # Check Moody's API
     try:
         response = httpx.get(f"{settings.MOODY_API_BASE_URL}", timeout=2)
         response.raise_for_status()

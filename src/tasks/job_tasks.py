@@ -168,7 +168,7 @@ def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             db.add(workflow_status)
             
             # Map Moody's status to our job status
-            moody_to_job_status = {
+            moodys_to_job_status = {
                 "queued": JobStatus.QUEUED.value,
                 "running": JobStatus.RUNNING.value,
                 "completed": JobStatus.COMPLETED.value,
@@ -176,7 +176,7 @@ def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
                 "cancelled": JobStatus.CANCELLED.value
             }
             
-            new_status = moody_to_job_status.get(result["status"])
+            new_status = moodys_to_job_status.get(result["status"])
             if new_status and new_status != job.status:
                 job.status = new_status
                 logger.info(f"Job {job_id} status changed to {new_status}")

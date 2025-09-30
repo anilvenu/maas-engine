@@ -16,6 +16,10 @@ class JobRepository(BaseRepository[Job]):
     def __init__(self, db: Session):
         super().__init__(Job, db)
     
+    def get(self, job_id: int) -> Optional[Job]:
+        """Get job by ID."""
+        return self.db.query(Job).filter(Job.id == job_id).first()
+
     def get_with_details(self, job_id: int) -> Optional[Job]:
         """Get job with all related data."""
         return self.db.query(Job)\
@@ -36,7 +40,7 @@ class JobRepository(BaseRepository[Job]):
     def get_active_jobs(self) -> List[Job]:
         """Get all jobs in active state."""
         return self.db.query(Job)\
-            .filter(Job.status.in_(['initiated', 'queued', 'running']))\
+            .filter(Job.status.in_(JobStatus.is_active()))\
             .all()
     
     def get_stale_jobs(self, stale_threshold_seconds: int = 600) -> List[Job]:
@@ -45,7 +49,7 @@ class JobRepository(BaseRepository[Job]):
         return self.db.query(Job)\
             .filter(
                 and_(
-                    Job.status.in_(['initiated', 'queued', 'running']),
+                    Job.status.in_(JobStatus.is_active()),
                     Job.updated_ts < threshold
                 )
             )\
@@ -68,8 +72,7 @@ class JobRepository(BaseRepository[Job]):
         
         if status == JobStatus.INITIATED.value:
             updates["initiation_ts"] = datetime.now(UTC)
-        elif status in [JobStatus.COMPLETED.value, JobStatus.FAILED.value, 
-                       JobStatus.CANCELLED.value]:
+        elif status in [JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value]:
             updates["completed_ts"] = datetime.now(UTC)
         
         return self.update(job_id, **updates)
