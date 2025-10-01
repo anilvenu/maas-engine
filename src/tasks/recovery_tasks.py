@@ -40,7 +40,7 @@ def perform_recovery_check(recovery_type: str = "scheduled") -> Dict[str, Any]:
         try:
             # Find all incomplete jobs
             incomplete_jobs = db.query(Job).filter(
-                Job.status.in_(['initiated', 'queued', 'running'])
+                Job.status.in_(['submitted', 'queued', 'running'])
             ).all()
             
             logger.info(f"Found {len(incomplete_jobs)} incomplete jobs to check")
@@ -125,7 +125,7 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
                     
                     # Clear old workflow_id and reset status
                     job.workflow_id = None
-                    job.status = 'planned'
+                    job.status = 'pending'
                     job.initiation_ts = None
                     db.commit()
                     
@@ -237,7 +237,7 @@ def detect_orphan_jobs() -> Dict[str, Any]:
         )
         
         orphan_jobs = db.query(Job).filter(
-            Job.status.in_(['initiated', 'queued', 'running']),
+            Job.status.in_(['submitted', 'queued', 'running']),
             Job.updated_ts < threshold
         ).all()
         

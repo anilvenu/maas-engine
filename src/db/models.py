@@ -69,7 +69,7 @@ class Job(Base):
     analysis_id = Column(Integer, ForeignKey("irp_analysis.id", ondelete="CASCADE"), nullable=False)
     configuration_id = Column(Integer, ForeignKey("irp_configuration.id"), nullable=False)
     workflow_id = Column(String(255), unique=True)
-    status = Column(Enum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.PLANNED.value)
+    status = Column(Enum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.PENDING.value)
     retry_count = Column(Integer, default=0)
     last_error = Column(Text)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())

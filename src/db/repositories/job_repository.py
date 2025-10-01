@@ -60,7 +60,7 @@ class JobRepository(BaseRepository[Job]):
         return self.create(
             analysis_id=analysis_id,
             configuration_id=configuration_id,
-            status=JobStatus.PLANNED.value
+            status=JobStatus.PENDING.value
         )
     
     def update_status(self, job_id: int, status: str, error: str = None) -> Optional[Job]:
@@ -70,7 +70,7 @@ class JobRepository(BaseRepository[Job]):
         if error:
             updates["last_error"] = error
         
-        if status == JobStatus.INITIATED.value:
+        if status == JobStatus.SUBMITTED.value:
             updates["initiation_ts"] = datetime.now(UTC)
         elif status in [JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value]:
             updates["completed_ts"] = datetime.now(UTC)

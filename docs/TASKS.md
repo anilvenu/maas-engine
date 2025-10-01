@@ -72,7 +72,7 @@ Job tasks handle the lifecycle of Moody’s workflows: submission, polling, and 
 | Purpose          | Submit a job to Moody’s API and record its workflow ID.                                                                                                       |
 | Input            | `job_id` (database ID of the job).                                                                                                                            |
 | Output           | Dict with `workflow_id`, `status`, `message`.                                                                                                                 |
-| Key Actions      | - Fetch job from DB. <br> - Submit job to Moody’s API. <br> - Save `workflow_id` and update job status to `INITIATED`. <br> - Schedule first poll with delay. |
+| Key Actions      | - Fetch job from DB. <br> - Submit job to Moody’s API. <br> - Save `workflow_id` and update job status to `SUBMITTED`. <br> - Schedule first poll with delay. |
 | Failure Handling | - If job not found → error. <br> - If API returns retryable HTTP error → retried with exponential backoff. <br> - Errors logged in `RetryHistory`.            |
 
 This task initiates the workflow and ensures polling starts automatically after submission.

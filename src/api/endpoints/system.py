@@ -138,8 +138,8 @@ def get_system_stats(db: Session = Depends(get_db)):
         },
         "jobs": {
             "total": db.query(Job).count(),
-            "planned": db.query(Job).filter(Job.status == "planned").count(),
-            "initiated": db.query(Job).filter(Job.status == "initiated").count(),
+            "pending": db.query(Job).filter(Job.status == "pending").count(),
+            "submitted": db.query(Job).filter(Job.status == "submitted").count(),
             "queued": db.query(Job).filter(Job.status == "queued").count(),
             "running": db.query(Job).filter(Job.status == "running").count(),
             "completed": db.query(Job).filter(Job.status == "completed").count(),

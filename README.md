@@ -51,19 +51,19 @@
 
 ```
 YAML Upload → Parse → Create Analysis → Create Configurations 
-→ Create Jobs (status: planned) → Queue Submission Tasks
-→ Submit to Moody's (via Orchestration Layer) → Update to initiated
+→ Create Jobs (status: pending) → Queue Submission Tasks
+→ Submit to Moody's (via Orchestration Layer) → Update to submitted
 → Store Celery Task ID → Schedule Polling Tasks
 ```
 
 ```
                deploy
         ┌──────────┐
-        │ planned  │
+        │ pending  │
         └────┬─────┘
              │ initiate
         ┌────▼─────┐
-        │initiated │
+        │submitted │
         └────┬─────┘
              │ submit & response
         ┌────▼─────┐
@@ -81,7 +81,7 @@ YAML Upload → Parse → Create Analysis → Create Configurations
 └──────────┘        └───────────┘      └─────┬─────┘
                                              │ retry
                                        ┌─────▼─────┐
-                                       │ planned   │
+                                       │ pending   │
                                        │(new job)  │
                                        └───────────┘
 

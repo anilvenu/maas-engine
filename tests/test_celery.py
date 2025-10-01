@@ -50,7 +50,7 @@ def test_celery_tasks():
         job = Job(
             analysis_id=analysis.id,
             configuration_id=config.id,
-            status=JobStatus.PLANNED.value
+            status=JobStatus.PENDING.value
         )
         db.add(job)
         db.commit()

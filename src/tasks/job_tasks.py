@@ -62,7 +62,7 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
             
             # Update job with workflow ID
             job.workflow_id = result["workflow_id"]
-            job.status = JobStatus.INITIATED.value
+            job.status = JobStatus.SUBMITTED.value
             job.initiation_ts = datetime.now(UTC)
             job.celery_task_id = self.request.id
             db.commit()

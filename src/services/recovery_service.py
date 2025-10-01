@@ -139,7 +139,7 @@ class RecoveryService:
             # Check for stale jobs
             stale_threshold = datetime.utcnow() - timedelta(hours=1)
             stale_jobs = db.query(Job).filter(
-                Job.status.in_(['initiated', 'queued', 'running']),
+                Job.status.in_(['submitted', 'queued', 'running']),
                 Job.updated_ts < stale_threshold
             ).count()
             

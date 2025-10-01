@@ -8,8 +8,8 @@ from enum import Enum
 
 # Enums
 class JobStatusEnum(str, Enum):
-    planned = "planned"
-    initiated = "initiated"
+    pending = "pending"
+    submitted = "submitted"
     queued = "queued"
     running = "running"
     completed = "completed"

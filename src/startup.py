@@ -47,7 +47,7 @@ def run_startup_tasks():
     try:
         recovery_service = RecoveryService()
         task_id = recovery_service.trigger_startup_recovery()
-        logger.info(f"Startup recovery initiated: task_id={task_id}")
+        logger.info(f"Startup recovery submitted: task_id={task_id}")
         return True
     except Exception as e:
         logger.error(f"Failed to trigger startup recovery: {e}")

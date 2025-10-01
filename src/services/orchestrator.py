@@ -67,7 +67,7 @@ class Orchestrator:
             # Submit each job
             for job in jobs:
                 try:
-                    if job.status != JobStatus.PLANNED.value:
+                    if job.status != JobStatus.PENDING.value:
                         self.logger.info(f"Skipping job {job.id} - already {job.status}")
                         results["skipped"] += 1
                         continue
@@ -112,7 +112,7 @@ class Orchestrator:
             # Get active jobs
             jobs = job_repo.get_jobs_by_analysis(analysis_id)
             active_jobs = [j for j in jobs if j.status in 
-                          ['initiated', 'queued', 'running']]
+                          ['submitted', 'queued', 'running']]
             
             results = {
                 "cancelled": 0,

@@ -120,7 +120,7 @@ def initiate_job(
             detail=f"Job {job_id} not found"
         )
     
-    if job.status != "planned":
+    if job.status != "pending":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Job is already {job.status}"
