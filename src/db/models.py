@@ -84,7 +84,7 @@ class Job(Base):
     batch = relationship("Batch", back_populates="jobs")
     configuration = relationship("Configuration", back_populates="jobs")
     parent_job = relationship("Job", remote_side=[id])
-    job_statuses = relationship("WorkflowStatus", back_populates="job", cascade="all, delete-orphan")
+    job_statuses = relationship("JobStatus", back_populates="job", cascade="all, delete-orphan")
     retry_history = relationship("RetryHistory", back_populates="job", cascade="all, delete-orphan")
     
     # Indexes
@@ -115,8 +115,8 @@ class Job(Base):
         return 0
 
 
-class WorkflowStatus(Base):
-    """Workflow status tracking model."""
+class JobStatus(Base):
+    """Job status tracking model."""
     __tablename__ = "irp_job_status"
     
     id = Column(Integer, primary_key=True)
@@ -137,7 +137,7 @@ class WorkflowStatus(Base):
     )
     
     def __repr__(self):
-        return f"<WorkflowStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
+        return f"<JobStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
 
 
 class RetryHistory(Base):

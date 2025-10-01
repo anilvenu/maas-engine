@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 
 from src.tasks.celery_app import celery
 from src.db.session import get_db_session
-from src.db.models import Job, WorkflowStatus, RetryHistory
+from src.db.models import Job, JobStatus, RetryHistory
 from src.core.constants import JobStatus, HTTPStatusCode
 from src.core.config import settings
 
@@ -157,8 +157,8 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             
             poll_duration_ms = int((datetime.now(UTC) - poll_start).total_seconds() * 1000)
             
-            # Store workflow status
-            job_status = WorkflowStatus(
+            # Store job status
+            job_status = JobStatus(
                 job_id=job_id,
                 status=result["status"],
                 response_data=result,
@@ -229,9 +229,9 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             # Handle 404 - workflow not found
             if status_code == 404:
                 job.status = JobStatus.FAILED.value
-                job.last_error = "Workflow not found in Moody's system"
+                job.last_error = "Job not found in Moody's system"
                 db.commit()
-                return {"status": "not_found", "error": "Workflow not found"}
+                return {"status": "not_found", "error": "Job not found"}
             
             # Retry for temporary errors
             if status_code in HTTPStatusCode.RETRYABLE:

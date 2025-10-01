@@ -37,9 +37,9 @@ Queues
 
 | Queue      | Purpose                         | Priority |
 | ---------- | ------------------------------- | -------- |
-| `default`  | General tasks (batch checks) | —        |
+| `default`  | General tasks (batch checks)    | —        |
 | `jobs`     | Job submission                  | 5        |
-| `polling`  | Workflow status polling         | 3        |
+| `polling`  | Job status polling              | 3        |
 | `recovery` | Recovery tasks                  | 10       |
 
 
@@ -63,7 +63,7 @@ Periodic Tasks (Celery Beat)
 
 Job Tasks (job_tasks.py)
 
-Job tasks handle the lifecycle of Moody’s workflows: submission, polling, and cancellation.
+Job tasks handle the lifecycle of Moody’s jobs: submission, polling, and cancellation.
 
 2.1. submit_job(job_id)
 
@@ -84,7 +84,7 @@ This task initiates the workflow and ensures polling starts automatically after 
 | Purpose             | Query Moody’s API for current workflow progress.                                                                                                                            |
 | Input               | `job_id`, `workflow_id`.                                                                                                                                                    |
 | Output              | Dict with `status`, `progress`, `terminal`.                                                                                                                                 |
-| Key Actions         | - Poll Moody’s API for workflow status. <br> - Save poll results in `WorkflowStatus`. <br> - Update `Job.status` if changed. <br> - Schedule next poll if job not terminal. |
+| Key Actions         | - Poll Moody’s API for workflow status. <br> - Save poll results in `JobStatus`. <br> - Update `Job.status` if changed. <br> - Schedule next poll if job not terminal. |
 | Terminal Conditions | `COMPLETED`, `FAILED`, `CANCELLED`.                                                                                                                                         |
 | Failure Handling    | - Retry transient errors. <br> - Mark job `FAILED` if workflow not found. <br> - Fail if exceeded maximum polling duration.                                                 |
 
@@ -140,7 +140,7 @@ Failures are expected in distributed systems. This app handles them through resu
 | **Logging**       | Every task logs key state transitions, errors, and retry attempts.                         |
 
 
-. End-to-End Workflow
+. End-to-End Process
 
 Job Submission
 submit_job sends job to Moody’s API and records workflow ID.

@@ -82,9 +82,9 @@ class MoodyAPIEndpoints:
 class ErrorMessages:
     """Standard error messages."""
     JOB_NOT_FOUND = "Job with ID {job_id} not found"
-    ANALYSIS_NOT_FOUND = "Batch with ID {batch_id} not found"
-    WORKFLOW_SUBMISSION_FAILED = "Failed to submit workflow: {error}"
-    POLL_FAILED = "Failed to poll workflow status: {error}"
+    BATCH_NOT_FOUND = "Batch with ID {batch_id} not found"
+    JOB_SUBMISSION_FAILED = "Failed to submit job: {error}"
+    POLL_FAILED = "Failed to poll job status: {error}"
     RECOVERY_FAILED = "Recovery process failed: {error}"
     INVALID_STATUS_TRANSITION = "Invalid status transition from {from_status} to {to_status}"
     MAX_RETRIES_EXCEEDED = "Maximum retry attempts ({max_retries}) exceeded"

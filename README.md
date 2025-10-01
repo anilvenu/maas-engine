@@ -317,10 +317,10 @@ Focuses on Batch lifecycle:
 
 Manages Job lifecycle:
 
-- Fetch jobs with details (config, workflow, resubmit history).
+- Fetch jobs with details (config, job, resubmit history).
 - Track active/stale jobs.
 - Update statuses with timestamps.
-- Record workflow polls and resubmit attempts.
+- Record job polls and resubmit attempts.
 - Produce metrics (age, time in status, execution duration).
 
 **ConfigurationRepository**

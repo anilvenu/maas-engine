@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, UTC
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
 
-from src.db.models import Job, WorkflowStatus, RetryHistory
+from src.db.models import Job, JobStatus, RetryHistory
 from src.db.repositories.base_repository import BaseRepository
 from src.core.constants import JobStatus
 
@@ -80,9 +80,9 @@ class JobRepository(BaseRepository[Job]):
     def record_job_status(self, job_id: int, status: str, 
                               response_data: Dict[str, Any],
                               http_status_code: int = 200,
-                              poll_duration_ms: int = None) -> WorkflowStatus:
-        """Record a workflow status poll result."""
-        job_status = WorkflowStatus(
+                              poll_duration_ms: int = None) -> JobStatus:
+        """Record a job status poll result."""
+        job_status = JobStatus(
             job_id=job_id,
             status=status,
             response_data=response_data,

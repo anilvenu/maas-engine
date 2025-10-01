@@ -8,7 +8,7 @@ import httpx
 from src.tasks.celery_app import celery
 from src.tasks.job_tasks import poll_job_status, submit_job
 from src.db.session import get_db_session
-from src.db.models import Job, SystemRecovery, WorkflowStatus
+from src.db.models import Job, SystemRecovery, JobStatus
 from src.core.constants import JobStatus, RecoveryType
 from src.core.config import settings
 
@@ -120,8 +120,8 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
                 )
                 
                 if response.status_code == 404:
-                    # Workflow not found in Moody's
-                    logger.warning(f"Workflow {job.workflow_id} not found, resubmitting job {job_id}")
+                    # Job not found in Moody's
+                    logger.warning(f"Job {job.workflow_id} not found, resubmitting job {job_id}")
                     
                     # Clear old workflow_id and reset status
                     job.workflow_id = None
@@ -158,7 +158,7 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
                         job.completed_ts = datetime.utcnow()
                     
                     # Record the status update
-                    job_status = WorkflowStatus(
+                    job_status = JobStatus(
                         job_id=job_id,
                         status=current_status,
                         response_data=result,

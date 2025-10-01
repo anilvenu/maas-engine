@@ -53,10 +53,10 @@ class YAMLUpload(BaseModel):
     auto_submit: bool = True
 
 
-# Response Models
-class WorkflowStatusInfo(BaseModel):
-    """Workflow status information."""
-    workflow_id: str
+# Response Models <TODO>
+class JobStatusInfo(BaseModel):
+    """Job status information."""
+    job_id: str
     status: str
     progress_percentage: Optional[int] = None
     last_polled: Optional[datetime] = None
@@ -85,7 +85,7 @@ class JobResponse(BaseModel):
 class JobDetailResponse(JobResponse):
     """Detailed job response with metrics."""
     configuration_name: Optional[str] = None
-    job_status: Optional[WorkflowStatusInfo] = None
+    job_status: Optional[JobStatusInfo] = None
     metrics: Optional[Dict[str, Any]] = None
     poll_count: int = 0
     resubmit_history: Optional[List[Dict[str, Any]]] = None

@@ -1,4 +1,4 @@
-"""Orchestration service for managing job workflow."""
+"""Orchestration service for managing job flow."""
 
 import logging
 from typing import List, Dict, Any, Optional

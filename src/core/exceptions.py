@@ -16,7 +16,7 @@ class BatchNotFoundException(IRPException):
     pass
 
 
-class WorkflowSubmissionException(IRPException):
+class JobSubmissionException(IRPException):
     """Raised when workflow submission fails."""
     pass
 

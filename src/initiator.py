@@ -86,6 +86,11 @@ class YAMLProcessor:
         Returns:
             Dict with processing results
         """
+        self.logger.info(f"Processing YAML data: {yaml_data}")
+
+        # Validate YAML
+        self._validate_yaml(yaml_data)
+
         batch_config = yaml_data['batch']
         
         with get_db_session() as db:

@@ -44,7 +44,7 @@ def list_batch(
     return batch
 
 # Create a new batch
-@router.post("/", 
+@router.post("/new", 
              response_model=BatchSummaryResponse,
              dependencies=[Depends(verify_api_key)])
 def create_batch(
