@@ -20,8 +20,8 @@ def test_full_flow():
     
     # Create test YAML
     test_yaml = {
-        "analysis": {
-            "name": "Integration Test Analysis",
+        "batch": {
+            "name": "Integration Test Batch",
             "description": "Testing complete workflow",
             "configurations": [
                 {
@@ -40,20 +40,20 @@ def test_full_flow():
     
     # Process with auto-submit
     result = processor.process_yaml_data(test_yaml, auto_submit=True)
-    print(f"   Analysis created: ID={result['analysis_id']}")
+    print(f"   Batch created: ID={result['batch_id']}")
     print(f"   Jobs created: {result['jobs_created']}")
     print(f"   Submission: {result.get('submission', {})}")
     
     # 2. Check progress
-    print("\n2. Checking analysis progress...")
+    print("\n2. Checking batch progress...")
     orchestrator = Orchestrator()
     
     # Wait a bit for jobs to start
     time.sleep(5)
     
-    progress = orchestrator.get_analysis_progress(result['analysis_id'])
+    progress = orchestrator.get_batch_progress(result['batch_id'])
     print(f"   Progress: {progress['progress_percentage']:.0f}%")
-    print(f"   Job statuses: {progress['analysis']['job_status_counts']}")
+    print(f"   Job statuses: {progress['batch']['job_status_counts']}")
     
     print("\n=== Test Complete ===\n")
 

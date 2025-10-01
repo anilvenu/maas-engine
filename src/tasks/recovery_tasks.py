@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 import httpx
 
 from src.tasks.celery_app import celery
-from src.tasks.job_tasks import poll_workflow_status, submit_job
+from src.tasks.job_tasks import poll_job_status, submit_job
 from src.db.session import get_db_session
 from src.db.models import Job, SystemRecovery, WorkflowStatus
 from src.core.constants import JobStatus, RecoveryType
@@ -158,13 +158,13 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
                         job.completed_ts = datetime.utcnow()
                     
                     # Record the status update
-                    workflow_status = WorkflowStatus(
+                    job_status = WorkflowStatus(
                         job_id=job_id,
                         status=current_status,
                         response_data=result,
                         http_status_code=200
                     )
-                    db.add(workflow_status)
+                    db.add(job_status)
                     db.commit()
                 
                 # Resume polling if still active
@@ -178,7 +178,7 @@ def recover_single_job(job_id: int) -> Dict[str, Any]:
                         countdown = settings.POLL_INTERVAL_RUNNING_SECONDS
                     
                     # Schedule next poll
-                    poll_workflow_status.apply_async(
+                    poll_job_status.apply_async(
                         args=[job_id, job.workflow_id],
                         countdown=countdown,
                         queue='polling'

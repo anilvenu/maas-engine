@@ -126,15 +126,15 @@ def get_recovery_status(db: Session = Depends(get_db)):
 @router.get("/stats")
 def get_system_stats(db: Session = Depends(get_db)):
     """Get system statistics."""
-    from src.db.models import Analysis, Job, Configuration
+    from src.db.models import Batch, Job, Configuration
     
     stats = {
-        "analysis": {
-            "total": db.query(Analysis).count(),
-            "pending": db.query(Analysis).filter(Analysis.status == "pending").count(),
-            "running": db.query(Analysis).filter(Analysis.status == "running").count(),
-            "completed": db.query(Analysis).filter(Analysis.status == "completed").count(),
-            "failed": db.query(Analysis).filter(Analysis.status == "failed").count(),
+        "batch": {
+            "total": db.query(Batch).count(),
+            "pending": db.query(Batch).filter(Batch.status == "pending").count(),
+            "running": db.query(Batch).filter(Batch.status == "running").count(),
+            "completed": db.query(Batch).filter(Batch.status == "completed").count(),
+            "failed": db.query(Batch).filter(Batch.status == "failed").count(),
         },
         "jobs": {
             "total": db.query(Job).count(),

@@ -29,8 +29,8 @@ class JobStatus(str, Enum):
                           cls.RUNNING.value]
 
 
-class AnalysisStatus(str, Enum):
-    """Analysis status enumeration."""
+class BatchStatus(str, Enum):
+    """Batch status enumeration."""
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -74,7 +74,7 @@ class HTTPStatusCode:
 class MoodyAPIEndpoints:
     """Mock Moody's API endpoints."""
     SUBMIT_WORKFLOW = "/workflows"
-    WORKFLOW_STATUS = "/workflows/{workflow_id}/status"
+    JOB_STATUS = "/workflows/{workflow_id}/status"
     CANCEL_WORKFLOW = "/workflows/{workflow_id}/cancel"
 
 
@@ -82,7 +82,7 @@ class MoodyAPIEndpoints:
 class ErrorMessages:
     """Standard error messages."""
     JOB_NOT_FOUND = "Job with ID {job_id} not found"
-    ANALYSIS_NOT_FOUND = "Analysis with ID {analysis_id} not found"
+    ANALYSIS_NOT_FOUND = "Batch with ID {batch_id} not found"
     WORKFLOW_SUBMISSION_FAILED = "Failed to submit workflow: {error}"
     POLL_FAILED = "Failed to poll workflow status: {error}"
     RECOVERY_FAILED = "Recovery process failed: {error}"

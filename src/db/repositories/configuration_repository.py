@@ -13,20 +13,20 @@ class ConfigurationRepository(BaseRepository[Configuration]):
     def __init__(self, db: Session):
         super().__init__(Configuration, db)
     
-    def get_by_analysis(self, analysis_id: int, active_only: bool = True) -> List[Configuration]:
-        """Get configurations for an analysis."""
-        query = self.db.query(Configuration).filter(Configuration.analysis_id == analysis_id)
+    def get_by_batch(self, batch_id: int, active_only: bool = True) -> List[Configuration]:
+        """Get configurations for an batch."""
+        query = self.db.query(Configuration).filter(Configuration.batch_id == batch_id)
         if active_only:
             query = query.filter(Configuration.is_active == True)
         return query.all()
     
-    def create_configuration(self, analysis_id: int, name: str, 
+    def create_configuration(self, batch_id: int, name: str, 
                            config_data: Dict[str, Any]) -> Configuration:
         """Create a new configuration."""
         # Check if configuration with same name exists
         existing = self.db.query(Configuration)\
             .filter(
-                Configuration.analysis_id == analysis_id,
+                Configuration.batch_id == batch_id,
                 Configuration.config_name == name
             ).first()
         
@@ -35,13 +35,13 @@ class ConfigurationRepository(BaseRepository[Configuration]):
             # Get max version
             max_version = self.db.query(Configuration.version)\
                 .filter(
-                    Configuration.analysis_id == analysis_id,
+                    Configuration.batch_id == batch_id,
                     Configuration.config_name == name
                 ).scalar()
             version = max_version + 1 if max_version else 1
         
         return self.create(
-            analysis_id=analysis_id,
+            batch_id=batch_id,
             config_name=name,
             config_data=config_data,
             is_active=True,
@@ -60,7 +60,7 @@ class ConfigurationRepository(BaseRepository[Configuration]):
         
         # Create new version
         new_config = self.create_configuration(
-            existing.analysis_id,
+            existing.batch_id,
             existing.config_name,
             config_data
         )

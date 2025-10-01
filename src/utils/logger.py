@@ -29,8 +29,8 @@ class JSONFormatter(logging.Formatter):
         # Add extra fields if present
         if hasattr(record, "job_id"):
             log_data["job_id"] = record.job_id
-        if hasattr(record, "analysis_id"):
-            log_data["analysis_id"] = record.analysis_id
+        if hasattr(record, "batch_id"):
+            log_data["batch_id"] = record.batch_id
         if hasattr(record, "workflow_id"):
             log_data["workflow_id"] = record.workflow_id
         if hasattr(record, "task_id"):

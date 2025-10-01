@@ -16,14 +16,12 @@ logger = get_logger(__name__)
 
 def main():
     """Initialize database."""
+
+    logger.info("Initializing database...")
     try:
-        logger.info("Initializing database...")
-        
         # Create all tables
-        Base.metadata.create_all(bind=engine)
-        
-        logger.info("Database initialized successfully!")
-        
+        init_db()
+
         # List created tables
         from sqlalchemy import inspect
         inspector = inspect(engine)

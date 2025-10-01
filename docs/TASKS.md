@@ -37,7 +37,7 @@ Queues
 
 | Queue      | Purpose                         | Priority |
 | ---------- | ------------------------------- | -------- |
-| `default`  | General tasks (analysis checks) | —        |
+| `default`  | General tasks (batch checks) | —        |
 | `jobs`     | Job submission                  | 5        |
 | `polling`  | Workflow status polling         | 3        |
 | `recovery` | Recovery tasks                  | 10       |
@@ -47,9 +47,9 @@ Task Routing
 
 submit_job → jobs queue
 
-poll_workflow_status → polling queue
+poll_job_status → polling queue
 
-check_analysis_completion → default queue
+check_batch_completion → default queue
 
 recovery_tasks.* → recovery queue
 
@@ -57,7 +57,7 @@ Periodic Tasks (Celery Beat)
 
 | Task                     | Schedule         |
 | ------------------------ | ---------------- |
-| `check_all_analysis`     | Every 30 minutes |
+| `check_all_batch`     | Every 30 minutes |
 | `perform_recovery_check` | Every 60 minutes |
 
 
@@ -77,7 +77,7 @@ Job tasks handle the lifecycle of Moody’s workflows: submission, polling, and 
 
 This task initiates the workflow and ensures polling starts automatically after submission.
 
-2.2. poll_workflow_status(job_id, workflow_id)
+2.2. poll_job_status(job_id, workflow_id)
 
 | Aspect              | Description                                                                                                                                                                 |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -103,34 +103,34 @@ This task ensures that the system tracks job status until completion, failure, c
 Cancellation provides operator control to stop unnecessary processing.
 
 
-Analysis Tasks (analysis_tasks.py)
+Batch Tasks (batch_tasks.py)
 
-Analysis tasks roll up job statuses to determine the overall state of an analysis.
+Batch tasks roll up job statuses to determine the overall state of an batch.
 
 | Aspect           | Description                                                                                                                                                                                                   |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Purpose          | Evaluate whether all jobs under an analysis are complete.                                                                                                                                                     |
-| Input            | `analysis_id`.                                                                                                                                                                                                |
+| Purpose          | Evaluate whether all jobs under an batch are complete.                                                                                                                                                     |
+| Input            | `batch_id`.                                                                                                                                                                                                |
 | Output           | Dict with `status` and job `counts`.                                                                                                                                                                          |
-| Key Actions      | - Count job statuses (completed, failed, cancelled, active). <br> - If jobs still active → analysis `RUNNING`. <br> - If all terminal → set analysis to final state (completed, failed, cancelled, or mixed). |
-| Failure Handling | - Return error if analysis not found.                                                                                                                                                                         |
+| Key Actions      | - Count job statuses (completed, failed, cancelled, active). <br> - If jobs still active → batch `RUNNING`. <br> - If all terminal → set batch to final state (completed, failed, cancelled, or mixed). |
+| Failure Handling | - Return error if batch not found.                                                                                                                                                                         |
 
-This ensures analysis status always reflects the current state of its jobs.
+This ensures batch status always reflects the current state of its jobs.
 
-3.2. check_all_analysis()
+3.2. check_all_batch()
 
 | Aspect      | Description                                                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Purpose     | Periodic sweep of all non-terminal analysis.                                                                                                 |
+| Purpose     | Periodic sweep of all non-terminal batch.                                                                                                 |
 | Input       | None.                                                                                                                                        |
 | Output      | Summary dict (`checked`, `completed`, `failed`, `still_running`).                                                                            |
-| Key Actions | - Find analysis with status `pending` or `running`. <br> - Call `check_analysis_completion` for each. <br> - Aggregate results into summary. |
+| Key Actions | - Find batch with status `pending` or `running`. <br> - Call `check_batch_completion` for each. <br> - Aggregate results into summary. |
 
-Runs periodically to ensure system-wide consistency of analysis states.
+Runs periodically to ensure system-wide consistency of batch states.
 
 Failure Handling & Observability
 
-Failures are expected in distributed systems. This app handles them through retry logic, logging, and database tracking.
+Failures are expected in distributed systems. This app handles them through resubmit logic, logging, and database tracking.
 
 | Mechanism         | Description                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------------ |
@@ -146,13 +146,13 @@ Job Submission
 submit_job sends job to Moody’s API and records workflow ID.
 
 Polling
-poll_workflow_status queries status until terminal or timeout.
+poll_job_status queries status until terminal or timeout.
 
-Analysis Evaluation
-check_analysis_completion rolls up job statuses.
+Batch Evaluation
+check_batch_completion rolls up job statuses.
 
 Automation
-check_all_analysis runs periodically to catch missed analysis.
+check_all_batch runs periodically to catch missed batch.
 
 Cancellation (Optional)
 cancel_job allows operators to manually stop a workflow.
@@ -164,4 +164,4 @@ Retry Logic: Automatic retries with exponential backoff for transient errors
 Status Tracking: Records all status changes and poll results
 Error Handling: Handles specific HTTP errors (429, 503, etc.) appropriately
 Polling Management: Automatic scheduling of next poll based on status
-Analysis Completion: Checks if all jobs in analysis are done
+Batch Completion: Checks if all jobs in batch are done

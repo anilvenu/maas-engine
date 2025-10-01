@@ -5,8 +5,8 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
 from src.db.session import get_db_session
-from src.db.models import Job, SystemRecovery, Analysis
-from src.core.constants import JobStatus, AnalysisStatus, RecoveryType
+from src.db.models import Job, SystemRecovery, Batch
+from src.core.constants import JobStatus, BatchStatus, RecoveryType
 from src.tasks.recovery_tasks import (
     perform_recovery_check,
     recover_single_job,
@@ -143,10 +143,10 @@ class RecoveryService:
                 Job.updated_ts < stale_threshold
             ).count()
             
-            # Check for stuck analysis
-            stuck_analysis = db.query(Analysis).filter(
-                Analysis.status == AnalysisStatus.RUNNING.value,
-                Analysis.updated_ts < stale_threshold
+            # Check for stuck batch
+            stuck_batch = db.query(Batch).filter(
+                Batch.status == BatchStatus.RUNNING.value,
+                Batch.updated_ts < stale_threshold
             ).count()
             
             # Check recent failures
@@ -169,10 +169,10 @@ class RecoveryService:
                 issues.append(f"{stale_jobs} stale jobs detected")
                 recommendations.append("Run recovery to resume stale jobs")
             
-            if stuck_analysis > 0:
+            if stuck_batch > 0:
                 health_status = "degraded"
-                issues.append(f"{stuck_analysis} stuck analysis detected")
-                recommendations.append("Check analysis completion logic")
+                issues.append(f"{stuck_batch} stuck batch detected")
+                recommendations.append("Check batch completion logic")
             
             if recent_failures > 10:
                 health_status = "degraded"
@@ -182,7 +182,7 @@ class RecoveryService:
             return {
                 "status": health_status,
                 "stale_jobs": stale_jobs,
-                "stuck_analysis": stuck_analysis,
+                "stuck_batch": stuck_batch,
                 "recent_failures": recent_failures,
                 "last_recovery": {
                     "timestamp": last_recovery.started_at.isoformat() if last_recovery else None,

@@ -41,7 +41,7 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
         
         # Prepare submission data
         submission_data = {
-            "analysis_id": job.analysis_id,
+            "batch_id": job.batch_id,
             "configuration_id": job.configuration_id,
             "model_name": job.configuration.config_data.get("model", "default_model"),
             "parameters": job.configuration.config_data.get("parameters", {})
@@ -70,7 +70,7 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
             logger.info(f"Job {job_id} submitted successfully: {job.workflow_id}")
             
             # Schedule first poll after initial delay
-            poll_workflow_status.apply_async(
+            poll_job_status.apply_async(
                 args=[job_id, job.workflow_id],
                 countdown=settings.POLL_INITIAL_DELAY_SECONDS
             )
@@ -119,8 +119,8 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
             raise self.retry(exc=e, countdown=60)
 
 
-@celery.task(bind=True, name='src.tasks.job_tasks.poll_workflow_status')
-def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
+@celery.task(bind=True, name='src.tasks.job_tasks.poll_job_status')
+def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
     """
     Poll workflow status from Moody's API.
     
@@ -158,14 +158,14 @@ def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             poll_duration_ms = int((datetime.now(UTC) - poll_start).total_seconds() * 1000)
             
             # Store workflow status
-            workflow_status = WorkflowStatus(
+            job_status = WorkflowStatus(
                 job_id=job_id,
                 status=result["status"],
                 response_data=result,
                 http_status_code=response.status_code,
                 poll_duration_ms=poll_duration_ms
             )
-            db.add(workflow_status)
+            db.add(job_status)
             
             # Map Moody's status to our job status
             moodys_to_job_status = {
@@ -208,7 +208,7 @@ def poll_workflow_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
                         return {"status": "timeout", "message": "Exceeded max poll duration"}
                 
                 # Schedule next poll
-                poll_workflow_status.apply_async(
+                poll_job_status.apply_async(
                     args=[job_id, workflow_id],
                     countdown=countdown
                 )

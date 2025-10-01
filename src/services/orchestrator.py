@@ -5,14 +5,14 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from src.db.session import get_db_session
-from src.db.repositories.analysis_repository import AnalysisRepository
+from src.db.repositories.batch_repository import BatchRepository
 from src.db.repositories.job_repository import JobRepository
 from src.db.repositories.configuration_repository import ConfigurationRepository
 from src.tasks.job_tasks import submit_job, cancel_job
-from src.tasks.analysis_tasks import check_analysis_completion
-from src.core.constants import JobStatus, AnalysisStatus
+from src.tasks.batch_tasks import check_batch_completion
+from src.core.constants import JobStatus, BatchStatus
 from src.core.exceptions import (
-    AnalysisNotFoundException, 
+    BatchNotFoundException, 
     JobNotFoundException,
     InvalidStatusTransitionException
 )
@@ -27,31 +27,31 @@ class Orchestrator:
         """Initialize orchestrator."""
         self.logger = logger
     
-    def submit_analysis_jobs(self, analysis_id: int) -> Dict[str, Any]:
+    def submit_batch_jobs(self, batch_id: int) -> Dict[str, Any]:
         """
-        Submit all jobs for an analysis.
+        Submit all jobs for an batch.
         
         Args:
-            analysis_id: Analysis ID
+            batch_id: Batch ID
             
         Returns:
             Dict with submission results
         """
-        self.logger.info(f"Submitting jobs for analysis {analysis_id}")
+        self.logger.info(f"Submitting jobs for batch {batch_id}")
         
         with get_db_session() as db:
-            analysis_repo = AnalysisRepository(db)
+            batch_repo = BatchRepository(db)
             job_repo = JobRepository(db)
             
-            # Get analysis
-            analysis = analysis_repo.get(analysis_id)
-            if not analysis:
-                raise AnalysisNotFoundException(f"Analysis {analysis_id} not found")
+            # Get batch
+            batch = batch_repo.get(batch_id)
+            if not batch:
+                raise BatchNotFoundException(f"Batch {batch_id} not found")
             
-            # Get all jobs for analysis
-            jobs = job_repo.get_jobs_by_analysis(analysis_id)
+            # Get all jobs for batch
+            jobs = job_repo.get_jobs_by_batch(batch_id)
             if not jobs:
-                self.logger.warning(f"No jobs found for analysis {analysis_id}")
+                self.logger.warning(f"No jobs found for batch {batch_id}")
                 return {"submitted": 0, "skipped": 0, "errors": 0}
             
             results = {
@@ -61,8 +61,8 @@ class Orchestrator:
                 "job_ids": []
             }
             
-            # Update analysis status to running
-            analysis_repo.update_status(analysis_id, AnalysisStatus.RUNNING.value)
+            # Update batch status to running
+            batch_repo.update_status(batch_id, BatchStatus.RUNNING.value)
             
             # Submit each job
             for job in jobs:
@@ -83,34 +83,34 @@ class Orchestrator:
                     self.logger.error(f"Error submitting job {job.id}: {e}")
                     results["errors"] += 1
             
-            # Schedule analysis completion check
-            check_analysis_completion.delay(analysis_id)
+            # Schedule batch completion check
+            check_batch_completion.delay(batch_id)
             
             return results
     
-    def cancel_analysis(self, analysis_id: int) -> Dict[str, Any]:
+    def cancel_batch(self, batch_id: int) -> Dict[str, Any]:
         """
-        Cancel an analysis and all its jobs.
+        Cancel an batch and all its jobs.
         
         Args:
-            analysis_id: Analysis ID
+            batch_id: Batch ID
             
         Returns:
             Dict with cancellation results
         """
-        self.logger.info(f"Cancelling analysis {analysis_id}")
+        self.logger.info(f"Cancelling batch {batch_id}")
         
         with get_db_session() as db:
-            analysis_repo = AnalysisRepository(db)
+            batch_repo = BatchRepository(db)
             job_repo = JobRepository(db)
             
-            # Get analysis
-            analysis = analysis_repo.get(analysis_id)
-            if not analysis:
-                raise AnalysisNotFoundException(f"Analysis {analysis_id} not found")
+            # Get batch
+            batch = batch_repo.get(batch_id)
+            if not batch:
+                raise BatchNotFoundException(f"Batch {batch_id} not found")
             
             # Get active jobs
-            jobs = job_repo.get_jobs_by_analysis(analysis_id)
+            jobs = job_repo.get_jobs_by_batch(batch_id)
             active_jobs = [j for j in jobs if j.status in 
                           ['submitted', 'queued', 'running']]
             
@@ -136,32 +136,32 @@ class Orchestrator:
                     self.logger.error(f"Error cancelling job {job.id}: {e}")
                     results["errors"] += 1
             
-            # Cancel analysis
-            analysis_repo.cancel_analysis(analysis_id)
+            # Cancel batch
+            batch_repo.cancel_batch(batch_id)
             
             return results
     
-    def retry_failed_job(self, job_id: int, 
+    def resubmit_failed_job(self, job_id: int, 
                         config_override: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Retry a failed job.
+        Resubmit a failed job.
 
-        Retrying a job involves the following steps:
+        Resubmitting a job involves the following steps:
             1. Create a new configuration if override provided
-            2. Create a new job with the same analysis and configuration
+            2. Create a new job with the same batch and configuration
             3. Set the parent job reference
             4. Update the original job to cancelled
-            5. Update the analysis to running if needed
+            5. Update the batch to running if needed
             6. Submit the new job
 
         Args:
-            job_id: Job ID to retry
+            job_id: Job ID to resubmit
             config_override: Optional configuration override
             
         Returns:
             Dict with new job information
         """
-        self.logger.info(f"Retrying job {job_id}")
+        self.logger.info(f"Resubmitting job {job_id}")
         
         with get_db_session() as db:
             job_repo = JobRepository(db)
@@ -175,29 +175,29 @@ class Orchestrator:
             # Check if job is in terminal state
             if original_job.status not in ['failed', 'cancelled']:
                 raise InvalidStatusTransitionException(
-                    f"Can only retry failed or cancelled jobs, current status: {original_job.status}"
+                    f"Can only resubmit failed or cancelled jobs, current status: {original_job.status}"
                 )
                         
             # Create new configuration if override provided
             if config_override:
-                logger.info(f"Creating new configuration {original_job.configuration.config_name}_retry for job {job_id} retry")
+                logger.info(f"Creating new configuration {original_job.configuration.config_name}_resubmit for job {job_id} resubmit")
                 config = config_repo.create_configuration(
-                    original_job.analysis_id,
-                    f"{original_job.configuration.config_name}_retry",
+                    original_job.batch_id,
+                    f"{original_job.configuration.config_name}_resubmit",
                     config_override
                 )
                 config_id = config.id
             else:
                 # Use original configuration if no override provided
-                logger.info(f"Using original configuration {original_job.configuration_id} for job {job_id} retry")
+                logger.info(f"Using original configuration {original_job.configuration_id} for job {job_id} resubmit")
                 config_id = original_job.configuration_id
             
             # Create new job
             new_job = job_repo.create_job(
-                original_job.analysis_id,
+                original_job.batch_id,
                 config_id
             )
-            logger.info(f"Created new job {new_job.id} for job {job_id} retry")
+            logger.info(f"Created new job {new_job.id} for job {job_id} resubmit")
             
             # Set parent reference
             new_job.parent_job_id = original_job.id
@@ -206,19 +206,19 @@ class Orchestrator:
             job_repo.update_status(original_job.id, JobStatus.CANCELLED.value)
             logger.info(f"Updated original job {original_job.id} status to cancelled")
 
-            # Update the analysis to running if needed
-            if original_job.analysis.status != AnalysisStatus.RUNNING.value:
-                logger.info(f"Updating analysis {original_job.analysis_id} status to running")
-                analysis_repo = AnalysisRepository(db)
-                analysis_repo.update_status(original_job.analysis_id, AnalysisStatus.RUNNING.value)
+            # Update the batch to running if needed
+            if original_job.batch.status != BatchStatus.RUNNING.value:
+                logger.info(f"Updating batch {original_job.batch_id} status to running")
+                batch_repo = BatchRepository(db)
+                batch_repo.update_status(original_job.batch_id, BatchStatus.RUNNING.value)
             else:
-                logger.info(f"Analysis {original_job.analysis_id} already running")
+                logger.info(f"Batch {original_job.batch_id} already running")
 
             db.commit()
 
             # Submit new job
             submit_job.delay(new_job.id)
-            logger.info(f"Submitted new job {new_job.id} for job {job_id} retry")
+            logger.info(f"Submitted new job {new_job.id} for job {job_id} resubmit")
             
             return {
                 "original_job_id": job_id,
@@ -227,27 +227,27 @@ class Orchestrator:
                 "status": "submitted"
             }
     
-    def get_analysis_progress(self, analysis_id: int) -> Dict[str, Any]:
+    def get_batch_progress(self, batch_id: int) -> Dict[str, Any]:
         """
-        Get detailed progress of an analysis.
+        Get detailed progress of an batch.
         
         Args:
-            analysis_id: Analysis ID
+            batch_id: Batch ID
             
         Returns:
             Dict with progress information
         """
         with get_db_session() as db:
-            analysis_repo = AnalysisRepository(db)
+            batch_repo = BatchRepository(db)
             job_repo = JobRepository(db)
             
-            # Get analysis summary
-            summary = analysis_repo.get_analysis_summary(analysis_id)
+            # Get batch summary
+            summary = batch_repo.get_batch_summary(batch_id)
             if not summary:
-                raise AnalysisNotFoundException(f"Analysis {analysis_id} not found")
+                raise BatchNotFoundException(f"Batch {batch_id} not found")
             
             # Get job details
-            jobs = job_repo.get_jobs_by_analysis(analysis_id)
+            jobs = job_repo.get_jobs_by_batch(batch_id)
             job_details = []
             
             for job in jobs:
@@ -261,6 +261,6 @@ class Orchestrator:
                 })         
            
             return {
-                "analysis": summary,
+                "batch": summary,
                 "jobs": job_details,
             }

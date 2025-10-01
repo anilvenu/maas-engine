@@ -1,4 +1,4 @@
-analysis:
+batch:
   name: "Q1 2024 Risk Analysis"
   description: "Quarterly risk assessment for US portfolio"
   configurations:

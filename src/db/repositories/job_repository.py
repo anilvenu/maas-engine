@@ -25,16 +25,16 @@ class JobRepository(BaseRepository[Job]):
         return self.db.query(Job)\
             .options(
                 joinedload(Job.configuration),
-                joinedload(Job.workflow_statuses),
+                joinedload(Job.job_statuses),
                 joinedload(Job.retry_history)
             )\
             .filter(Job.id == job_id)\
             .first()
     
-    def get_jobs_by_analysis(self, analysis_id: int) -> List[Job]:
-        """Get all jobs for an analysis."""
+    def get_jobs_by_batch(self, batch_id: int) -> List[Job]:
+        """Get all jobs for an batch."""
         return self.db.query(Job)\
-            .filter(Job.analysis_id == analysis_id)\
+            .filter(Job.batch_id == batch_id)\
             .all()
     
     def get_active_jobs(self) -> List[Job]:
@@ -55,10 +55,10 @@ class JobRepository(BaseRepository[Job]):
             )\
             .all()
     
-    def create_job(self, analysis_id: int, configuration_id: int) -> Job:
+    def create_job(self, batch_id: int, configuration_id: int) -> Job:
         """Create a new job."""
         return self.create(
-            analysis_id=analysis_id,
+            batch_id=batch_id,
             configuration_id=configuration_id,
             status=JobStatus.PENDING.value
         )
@@ -77,21 +77,21 @@ class JobRepository(BaseRepository[Job]):
         
         return self.update(job_id, **updates)
     
-    def record_workflow_status(self, job_id: int, status: str, 
+    def record_job_status(self, job_id: int, status: str, 
                               response_data: Dict[str, Any],
                               http_status_code: int = 200,
                               poll_duration_ms: int = None) -> WorkflowStatus:
         """Record a workflow status poll result."""
-        workflow_status = WorkflowStatus(
+        job_status = WorkflowStatus(
             job_id=job_id,
             status=status,
             response_data=response_data,
             http_status_code=http_status_code,
             poll_duration_ms=poll_duration_ms
         )
-        self.db.add(workflow_status)
+        self.db.add(job_status)
         self.db.commit()
-        return workflow_status
+        return job_status
     
     def record_retry(self, job_id: int, error_code: str, 
                     error_message: str, retry_after: int = None) -> RetryHistory:
@@ -129,7 +129,7 @@ class JobRepository(BaseRepository[Job]):
             "age_minutes": 0,
             "time_in_status_minutes": 0,
             "retry_count": job.retry_count,
-            "poll_count": len(job.workflow_statuses) if job.workflow_statuses else 0
+            "poll_count": len(job.job_statuses) if job.job_statuses else 0
         }
         
         if job.created_ts:

@@ -13,7 +13,7 @@ celery = Celery(
     include=[
         'src.tasks.job_tasks',
         'src.tasks.recovery_tasks',
-        'src.tasks.analysis_tasks'
+        'src.tasks.batch_tasks'
     ]
 )
 
@@ -60,8 +60,8 @@ celery.conf.task_queues = (
 # Task routing
 celery.conf.task_routes = {
     'src.tasks.job_tasks.submit_job': {'queue': 'jobs'},
-    'src.tasks.job_tasks.poll_workflow_status': {'queue': 'polling'},
-    'src.tasks.analysis_tasks.check_analysis_completion': {'queue': 'default'},
+    'src.tasks.job_tasks.poll_job_status': {'queue': 'polling'},
+    'src.tasks.batch_tasks.check_batch_completion': {'queue': 'default'},
     'src.tasks.recovery_tasks.*': {'queue': 'recovery'},
 }
 
@@ -69,8 +69,8 @@ celery.conf.task_routes = {
 from celery.schedules import crontab
 
 celery.conf.beat_schedule = {
-    'check-analysis-completion': {
-        'task': 'src.tasks.analysis_tasks.check_all_analysis',
+    'check-batch-completion': {
+        'task': 'src.tasks.batch_tasks.check_all_batch',
         'schedule': crontab(minute='*/2'),  # Every 2 minutes
     },
     'recovery-check': {

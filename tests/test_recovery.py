@@ -20,13 +20,13 @@ def test_recovery():
     # 1. Create and submit a test job
     print("1. Creating test job...")
     with get_db_session() as db:
-        from src.db.repositories.analysis_repository import AnalysisRepository
+        from src.db.repositories.batch_repository import BatchRepository
         from src.db.repositories.configuration_repository import ConfigurationRepository
         from src.db.repositories.job_repository import JobRepository
         
-        # Create analysis
-        analysis_repo = AnalysisRepository(db)
-        analysis = analysis_repo.create_from_yaml(
+        # Create batch
+        batch_repo = BatchRepository(db)
+        batch = batch_repo.create_batch(
             "Recovery Test",
             {"test": True},
             "Testing recovery"
@@ -35,14 +35,14 @@ def test_recovery():
         # Create configuration
         config_repo = ConfigurationRepository(db)
         config = config_repo.create_configuration(
-            analysis.id,
+            batch.id,
             "Test Config",
             {"model": "test", "params": {}}
         )
         
         # Create job
         job_repo = JobRepository(db)
-        job = job_repo.create_job(analysis.id, config.id)
+        job = job_repo.create_job(batch.id, config.id)
         job_id = job.id
         
         print(f"   Created job ID: {job_id}")

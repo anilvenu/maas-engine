@@ -11,8 +11,8 @@ class JobNotFoundException(IRPException):
     pass
 
 
-class AnalysisNotFoundException(IRPException):
-    """Raised when an analysis is not found."""
+class BatchNotFoundException(IRPException):
+    """Raised when an batch is not found."""
     pass
 
 
