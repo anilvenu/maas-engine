@@ -8,7 +8,8 @@ from typing import Optional, Dict, Any
 from src.tasks.celery_app import celery
 from src.db.session import get_db_session
 from src.db.models import Job, JobStatus, RetryHistory
-from src.core.constants import JobStatus, HTTPStatusCode
+import src.core.constants as constants
+
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
             
             # Update job with workflow ID
             job.workflow_id = result["workflow_id"]
-            job.status = JobStatus.SUBMITTED.value
+            job.status = constants.JobStatus.SUBMITTED.value
             job.initiation_ts = datetime.now(UTC)
             job.celery_task_id = self.request.id
             db.commit()
@@ -102,12 +103,12 @@ def submit_job(self, job_id: int) -> Dict[str, Any]:
             db.commit()
             
             # Retry if retryable error
-            if status_code in HTTPStatusCode.RETRYABLE:
+            if status_code in constants.HTTPStatusCode.RETRYABLE:
                 retry_after = int(e.response.headers.get("Retry-After", 60))
                 raise self.retry(exc=e, countdown=retry_after)
             else:
                 # Non-retryable error
-                job.status = JobStatus.FAILED.value
+                job.status = constants.JobStatus.FAILED.value
                 db.commit()
                 raise
                 
@@ -140,7 +141,7 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             return {"error": "Job not found"}
         
         # Skip if job is already in terminal state
-        if JobStatus.is_terminal(job.status):
+        if constants.JobStatus.is_terminal(job.status):
             logger.info(f"Job {job_id} already in terminal state: {job.status}")
             return {"status": job.status, "terminal": True}
         
@@ -169,11 +170,11 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             
             # Map Moody's status to our job status
             moodys_to_job_status = {
-                "queued": JobStatus.QUEUED.value,
-                "running": JobStatus.RUNNING.value,
-                "completed": JobStatus.COMPLETED.value,
-                "failed": JobStatus.FAILED.value,
-                "cancelled": JobStatus.CANCELLED.value
+                "queued": constants.JobStatus.QUEUED.value,
+                "running": constants.JobStatus.RUNNING.value,
+                "completed": constants.JobStatus.COMPLETED.value,
+                "failed": constants.JobStatus.FAILED.value,
+                "cancelled": constants.JobStatus.CANCELLED.value
             }
             
             new_status = moodys_to_job_status.get(result["status"])
@@ -184,15 +185,15 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             job.last_poll_ts = datetime.now(UTC)
             
             # Update completed timestamp if terminal
-            if JobStatus.is_terminal(new_status):
+            if constants.JobStatus.is_terminal(new_status):
                 job.completed_ts = datetime.now(UTC)
             
             db.commit()
             
             # Schedule next poll if not terminal
-            if not JobStatus.is_terminal(new_status):
+            if not constants.JobStatus.is_terminal(new_status):
                 # Determine poll interval based on status
-                if new_status == JobStatus.QUEUED.value:
+                if new_status == constants.JobStatus.QUEUED.value:
                     countdown = settings.POLL_INTERVAL_QUEUED_SECONDS
                 else:
                     countdown = settings.POLL_INTERVAL_RUNNING_SECONDS
@@ -202,7 +203,7 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
                     elapsed = (datetime.now(UTC) - job.initiation_ts).total_seconds()
                     if elapsed > settings.POLL_MAX_DURATION_SECONDS:
                         logger.warning(f"Job {job_id} exceeded max poll duration")
-                        job.status = JobStatus.FAILED.value
+                        job.status = constants.JobStatus.FAILED.value
                         job.last_error = "Exceeded maximum polling duration"
                         db.commit()
                         return {"status": "timeout", "message": "Exceeded max poll duration"}
@@ -219,7 +220,7 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
                 "workflow_id": workflow_id,
                 "status": result["status"],
                 "progress": result.get("progress_percentage"),
-                "terminal": JobStatus.is_terminal(new_status)
+                "terminal": constants.JobStatus.is_terminal(new_status)
             }
             
         except httpx.HTTPStatusError as e:
@@ -228,13 +229,13 @@ def poll_job_status(self, job_id: int, workflow_id: str) -> Dict[str, Any]:
             
             # Handle 404 - workflow not found
             if status_code == 404:
-                job.status = JobStatus.FAILED.value
+                job.status = constants.JobStatus.FAILED.value
                 job.last_error = "Job not found in Moody's system"
                 db.commit()
                 return {"status": "not_found", "error": "Job not found"}
             
             # Retry for temporary errors
-            if status_code in HTTPStatusCode.RETRYABLE:
+            if status_code in constants.HTTPStatusCode.RETRYABLE:
                 raise self.retry(exc=e, countdown=60)
             
             return {"error": f"HTTP {status_code}"}
@@ -265,7 +266,7 @@ def cancel_job(job_id: int) -> Dict[str, Any]:
         if not job.workflow_id:
             return {"error": "Job has no workflow ID"}
         
-        if job.status in [JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value]:
+        if job.status in [constants.JobStatus.COMPLETED.value, constants.JobStatus.FAILED.value, constants.JobStatus.CANCELLED.value]:
             return {"status": job.status, "message": "Job already in terminal state"}
         
         try:
@@ -278,7 +279,7 @@ def cancel_job(job_id: int) -> Dict[str, Any]:
                 result = response.json()
             
             # Update job status
-            job.status = JobStatus.CANCELLED.value
+            job.status = constants.JobStatus.CANCELLED.value
             job.completed_ts = datetime.now(UTC)
             db.commit()
             

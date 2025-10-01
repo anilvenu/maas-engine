@@ -8,8 +8,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime, UTC
-
-from src.core.constants import JobStatus, BatchStatus, RecoveryType
+import enum
+import src.core.constants as constants
 
 Base = declarative_base()
 
@@ -17,11 +17,18 @@ Base = declarative_base()
 class Batch(Base):
     """Batch model."""
     __tablename__ = "irp_batch"
-    
+
+    ALL_STATUSES = ["pending", "running", "completed", "failed", "cancelled"]
+    ACTIVE_STATUSES = ["pending", "running"]
+    TERMINAL_STATUSES = ["completed", "cancelled"]
+    FAILED_STATUSES = ["failed"]
+
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    status = Column(Enum(BatchStatus, values_callable=lambda x: [e.value for e in x]), default=BatchStatus.PENDING.value)
+
+    status = Column(Enum(*ALL_STATUSES),default="pending", nullable=False)
+
     yaml_config = Column(JSON)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())
     updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -64,17 +71,34 @@ class Configuration(Base):
 class Job(Base):
     """Job model."""
     __tablename__ = "irp_job"
-    
+
+    ALL_STATUSES = ["pending", "submitted", "queued", "running", "completed", "failed", "cancelled"]
+    INITIAL_STATUSES = ["pending"]
+    ACTIVE_STATUSES = ["pending", "submitted", "queued", "running"]
+    FAILED_STATUSES = ["failed"]
+    TERMINAL_STATUSES = ["completed", "cancelled"]
+    RESUBMITTABLE_STATUSES = ["failed", "cancelled"]
+
     id = Column(Integer, primary_key=True)
-    batch_id = Column(Integer, ForeignKey("irp_batch.id", ondelete="CASCADE"), nullable=False)
-    configuration_id = Column(Integer, ForeignKey("irp_configuration.id"), nullable=False)
-    workflow_id = Column(String(255), unique=True)
-    status = Column(Enum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.PENDING.value)
+    batch_id = Column(Integer, 
+                      ForeignKey("irp_batch.id", ondelete="CASCADE"), 
+                      nullable=False)
+    configuration_id = Column(Integer, 
+                              ForeignKey("irp_configuration.id"), 
+                              nullable=False)
+    workflow_id = Column(String(255), 
+                         unique=True)
+    status = Column(Enum(*ALL_STATUSES, name="job_status"), 
+                         default="pending", 
+                         nullable=False)
     retry_count = Column(Integer, default=0)
     last_error = Column(Text)
-    created_ts = Column(DateTime(timezone=True), server_default=func.now())
+    created_ts = Column(DateTime(timezone=True), 
+                        server_default=func.now())
     initiation_ts = Column(DateTime(timezone=True))
-    updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_ts = Column(DateTime(timezone=True), 
+                        server_default=func.now(), 
+                        onupdate=func.now())
     completed_ts = Column(DateTime(timezone=True))
     parent_job_id = Column(Integer, ForeignKey("irp_job.id"))
     celery_task_id = Column(String(255))
@@ -115,6 +139,30 @@ class Job(Base):
         return 0
 
 
+class BatchStatus(Base):
+    """Batch status tracking model."""
+    __tablename__ = "irp_batch_status"
+    
+    id = Column(Integer, primary_key=True)
+    batch_id = Column(Integer, ForeignKey("irp_batch.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), nullable=False)
+    batch_summary = Column(JSON)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    comments = Column(String(255))
+    
+    # Relationships
+    batch = relationship("Batch")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_batch_status_batch_id', 'batch_id'),
+        Index('idx_batch_status_updated_at', 'updated_at'),
+    )
+    
+    def __repr__(self):
+        return f"<BatchStatus(id={self.id}, batch_id={self.batch_id}, status={self.status})>"
+
+
 class JobStatus(Base):
     """Job status tracking model."""
     __tablename__ = "irp_job_status"
@@ -138,6 +186,9 @@ class JobStatus(Base):
     
     def __repr__(self):
         return f"<JobStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
+
+
+
 
 
 class RetryHistory(Base):
@@ -170,7 +221,7 @@ class SystemRecovery(Base):
     __tablename__ = "irp_system_recovery"
     
     id = Column(Integer, primary_key=True)
-    recovery_type = Column(Enum(RecoveryType), nullable=False)
+    recovery_type = Column(Enum(constants.RecoveryType), nullable=False)
     jobs_recovered = Column(Integer, default=0)
     jobs_resubmitted = Column(Integer, default=0)
     jobs_resumed_polling = Column(Integer, default=0)

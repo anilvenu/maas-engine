@@ -7,8 +7,7 @@ from sqlalchemy import and_
 
 from src.db.models import Batch, Configuration, Job
 from src.db.repositories.base_repository import BaseRepository
-from src.core.constants import BatchStatus, JobStatus
-
+import src.core.constants as constants
 
 class BatchRepository(BaseRepository[Batch]):
     """Repository for batch-related database operations."""
@@ -34,6 +33,9 @@ class BatchRepository(BaseRepository[Batch]):
         if not batch:
             return None
         
+        print(f"Getting summary for batch {batch_id}")
+        print(f"Batch details: {batch}")
+
         jobs = self.db.query(Job).filter(Job.batch_id == batch_id).all()
         
         status_counts = {}
@@ -67,15 +69,16 @@ class BatchRepository(BaseRepository[Batch]):
             name=name,
             description=description,
             yaml_config=yaml_config,
-            status=BatchStatus.PENDING.value
+            status=constants.BatchStatus.PENDING.value
         )
         return batch
     
     def update_status(self, batch_id: int, status: str) -> Optional[Batch]:
         """Update batch status."""
         updates = {"status": status}
-        if status in [BatchStatus.COMPLETED.value, BatchStatus.FAILED.value, 
-                     BatchStatus.CANCELLED.value]:
+        if status in [constants.BatchStatus.COMPLETED.value, 
+                      constants.BatchStatus.FAILED.value, 
+                      constants.BatchStatus.CANCELLED.value]:
             updates["completed_ts"] = datetime.now(UTC)
         else:
             updates["completed_ts"] = None
@@ -97,12 +100,12 @@ class BatchRepository(BaseRepository[Batch]):
                 )
             )\
             .update(
-                {"status": JobStatus.CANCELLED.value, "completed_ts": datetime.now(UTC)},
+                {"status": constants.JobStatus.CANCELLED.value, "completed_ts": datetime.now(UTC)},
                 synchronize_session=False
             )
         
         # Update batch status
-        batch.status = BatchStatus.CANCELLED.value
+        batch.status = constants.BatchStatus.CANCELLED.value
         batch.completed_ts = datetime.now(UTC)
         self.db.commit()
         

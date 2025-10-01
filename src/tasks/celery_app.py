@@ -81,7 +81,7 @@ celery.conf.beat_schedule = {
     },
     'orphan-detection': {
         'task': 'src.tasks.recovery_tasks.detect_orphan_jobs',
-        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'schedule': crontab(minute='*/2'),  # Every 2 minutes
         'options': {'queue': 'recovery'}
     },
 }

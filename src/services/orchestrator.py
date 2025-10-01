@@ -10,7 +10,7 @@ from src.db.repositories.job_repository import JobRepository
 from src.db.repositories.configuration_repository import ConfigurationRepository
 from src.tasks.job_tasks import submit_job, cancel_job
 from src.tasks.batch_tasks import check_batch_completion
-from src.core.constants import JobStatus, BatchStatus
+import src.core.constants as constants
 from src.core.exceptions import (
     BatchNotFoundException, 
     JobNotFoundException,
@@ -62,12 +62,12 @@ class Orchestrator:
             }
             
             # Update batch status to running
-            batch_repo.update_status(batch_id, BatchStatus.RUNNING.value)
+            batch_repo.update_status(batch_id, constants.BatchStatus.RUNNING.value)
             
             # Submit each job
             for job in jobs:
                 try:
-                    if job.status != JobStatus.PENDING.value:
+                    if job.status != constants.JobStatus.PENDING.value:
                         self.logger.info(f"Skipping job {job.id} - already {job.status}")
                         results["skipped"] += 1
                         continue
@@ -129,7 +129,7 @@ class Orchestrator:
                         results["cancelled"] += 1
                     else:
                         # Just update status
-                        job_repo.update_status(job.id, JobStatus.CANCELLED.value)
+                        job_repo.update_status(job.id, constants.JobStatus.CANCELLED.value)
                         results["cancelled"] += 1
                         
                 except Exception as e:
@@ -203,14 +203,14 @@ class Orchestrator:
             new_job.parent_job_id = original_job.id
 
             # Update the original job to cancelled
-            job_repo.update_status(original_job.id, JobStatus.CANCELLED.value)
+            job_repo.update_status(original_job.id, constants.JobStatus.CANCELLED.value)
             logger.info(f"Updated original job {original_job.id} status to cancelled")
 
             # Update the batch to running if needed
-            if original_job.batch.status != BatchStatus.RUNNING.value:
+            if original_job.batch.status != constants.BatchStatus.RUNNING.value:
                 logger.info(f"Updating batch {original_job.batch_id} status to running")
                 batch_repo = BatchRepository(db)
-                batch_repo.update_status(original_job.batch_id, BatchStatus.RUNNING.value)
+                batch_repo.update_status(original_job.batch_id, constants.BatchStatus.RUNNING.value)
             else:
                 logger.info(f"Batch {original_job.batch_id} already running")
 

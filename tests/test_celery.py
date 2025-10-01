@@ -5,11 +5,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import time
-from src.tasks.job_tasks import submit_job, poll_job_status
+from src.tasks.job_tasks import submit_job
 from src.tasks.batch_tasks import check_batch_completion
 from src.db.session import get_db_session
 from src.db.models import Batch, Configuration, Job
-from src.core.constants import BatchStatus, JobStatus
+import src.core.constants as constants
+
 import json
 
 
@@ -24,7 +25,7 @@ def test_celery_tasks():
         batch = Batch(
             name="Celery Test Batch",
             description="Testing Celery tasks",
-            status=BatchStatus.PENDING.value,
+            status=constants.BatchStatus.PENDING.value,
             yaml_config={"test": True}
         )
         db.add(batch)
@@ -50,7 +51,7 @@ def test_celery_tasks():
         job = Job(
             batch_id=batch.id,
             configuration_id=config.id,
-            status=JobStatus.PENDING.value
+            status=constants.JobStatus.PENDING.value
         )
         db.add(job)
         db.commit()

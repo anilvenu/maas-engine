@@ -32,15 +32,10 @@ def list_jobs(
     
     query = db.query(repo.model)
     
-    print(batch_id, status)
-    print(f"   Query before filters: {query}")
-
     if batch_id:
         query = query.filter(repo.model.batch_id == batch_id)
     if status:
         query = query.filter(repo.model.status == status)
-
-    print(f"   Query after filters: {query}")
 
     jobs = query.offset(skip).limit(limit).all()
        

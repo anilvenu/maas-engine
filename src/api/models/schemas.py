@@ -69,7 +69,7 @@ class JobResponse(BaseModel):
     configuration_id: int
     workflow_id: Optional[str] = None
     status: JobStatusEnum
-    resubmit_count: int
+    retry_count: int
     last_error: Optional[str] = None
     created_ts: datetime
     initiation_ts: Optional[datetime] = None

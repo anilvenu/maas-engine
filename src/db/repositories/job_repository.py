@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_
 
 from src.db.models import Job, JobStatus, RetryHistory
 from src.db.repositories.base_repository import BaseRepository
-from src.core.constants import JobStatus
+import src.core.constants as constants
 
 
 class JobRepository(BaseRepository[Job]):
@@ -40,7 +40,7 @@ class JobRepository(BaseRepository[Job]):
     def get_active_jobs(self) -> List[Job]:
         """Get all jobs in active state."""
         return self.db.query(Job)\
-            .filter(Job.status.in_(JobStatus.is_active()))\
+            .filter(Job.status.in_(constants.JobStatus.is_active()))\
             .all()
     
     def get_stale_jobs(self, stale_threshold_seconds: int = 600) -> List[Job]:
@@ -49,7 +49,7 @@ class JobRepository(BaseRepository[Job]):
         return self.db.query(Job)\
             .filter(
                 and_(
-                    Job.status.in_(JobStatus.is_active()),
+                    Job.status.in_(constants.JobStatus.is_active()),
                     Job.updated_ts < threshold
                 )
             )\
@@ -60,7 +60,7 @@ class JobRepository(BaseRepository[Job]):
         return self.create(
             batch_id=batch_id,
             configuration_id=configuration_id,
-            status=JobStatus.PENDING.value
+            status=constants.JobStatus.PENDING.value
         )
     
     def update_status(self, job_id: int, status: str, error: str = None) -> Optional[Job]:
@@ -69,10 +69,13 @@ class JobRepository(BaseRepository[Job]):
         
         if error:
             updates["last_error"] = error
-        
-        if status == JobStatus.SUBMITTED.value:
+
+        if status == constants.JobStatus.SUBMITTED.value:
             updates["initiation_ts"] = datetime.now(UTC)
-        elif status in [JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value]:
+            
+        elif status in [constants.JobStatus.COMPLETED.value, 
+                        constants.JobStatus.FAILED.value, 
+                        constants.JobStatus.CANCELLED.value]:
             updates["completed_ts"] = datetime.now(UTC)
         
         return self.update(job_id, **updates)

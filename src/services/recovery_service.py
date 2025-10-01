@@ -6,10 +6,9 @@ from datetime import datetime, timedelta
 
 from src.db.session import get_db_session
 from src.db.models import Job, SystemRecovery, Batch
-from src.core.constants import JobStatus, BatchStatus, RecoveryType
+import src.core.constants as constants
 from src.tasks.recovery_tasks import (
     perform_recovery_check,
-    recover_single_job,
     startup_recovery
 )
 
@@ -41,7 +40,7 @@ class RecoveryService:
         """
         self.logger.info("Manual recovery triggered")
         task = perform_recovery_check.apply_async(
-            args=[RecoveryType.MANUAL.value],
+            args=[constants.RecoveryType.MANUAL.value],
             queue='recovery'
         )
         
@@ -145,13 +144,13 @@ class RecoveryService:
             
             # Check for stuck batch
             stuck_batch = db.query(Batch).filter(
-                Batch.status == BatchStatus.RUNNING.value,
+                Batch.status == constants.BatchStatus.RUNNING.value,
                 Batch.updated_ts < stale_threshold
             ).count()
             
             # Check recent failures
             recent_failures = db.query(Job).filter(
-                Job.status == JobStatus.FAILED.value,
+                Job.status == constants.JobStatus.FAILED.value,
                 Job.completed_ts > datetime.utcnow() - timedelta(hours=1)
             ).count()
             

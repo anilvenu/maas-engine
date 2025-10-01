@@ -9,7 +9,7 @@ from src.tasks.celery_app import celery
 from src.tasks.job_tasks import poll_job_status, submit_job
 from src.db.session import get_db_session
 from src.db.models import Job, SystemRecovery, JobStatus
-from src.core.constants import JobStatus, RecoveryType
+import src.core.constants as constants
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -217,7 +217,7 @@ def startup_recovery() -> Dict[str, Any]:
     time.sleep(5)
     
     # Run recovery with startup type
-    return perform_recovery_check(recovery_type=RecoveryType.STARTUP.value)
+    return perform_recovery_check(recovery_type=constants.RecoveryType.STARTUP.value)
 
 
 @celery.task(name='src.tasks.recovery_tasks.detect_orphan_jobs')
