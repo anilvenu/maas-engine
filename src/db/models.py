@@ -51,21 +51,24 @@ class Configuration(Base):
     config_name = Column(String(255), nullable=False)
     config_data = Column(JSON, nullable=False)
     is_active = Column(Boolean, default=True)
+    skip = Column(Boolean, default=False, nullable=False)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())
     updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    version = Column(Integer, default=1)
+    version = Column(Integer, default=1, nullable=False)
     
     # Relationships
     batch = relationship("Batch", back_populates="configurations")
     jobs = relationship("Job", back_populates="configuration")
     
-    # Constraints
+    # Constraints - unique batch_id, config_name, version
     __table_args__ = (
-        UniqueConstraint('batch_id', 'config_name', 'version', name='unique_active_config_per_batch'),
+        UniqueConstraint('batch_id', 'config_name', 'version', 
+                        name='uq_batch_config_version'),
+        Index('idx_configuration_active', 'batch_id', 'config_name', 'is_active'),
     )
     
     def __repr__(self):
-        return f"<Configuration(id={self.id}, name={self.config_name}, version={self.version})>"
+        return f"<Configuration(id={self.id}, name={self.config_name}, version={self.version}, skip={self.skip})>"
 
 
 class Job(Base):

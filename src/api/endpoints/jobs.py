@@ -92,6 +92,8 @@ def get_job(
         updated_ts=job.updated_ts,
         completed_ts=job.completed_ts,
         configuration_name=job.configuration.config_name if job.configuration else None,
+        configuration_version=job.configuration.version if job.configuration else None,
+        configuration_skip=job.configuration.skip if job.configuration else None,
         metrics=metrics,
         poll_count=len(job.job_statuses) if job.job_statuses else 0
     )

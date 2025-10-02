@@ -30,11 +30,13 @@ class ConfigurationCreate(BaseModel):
     """Request model for creating configuration."""
     config_name: str = Field(..., min_length=1, max_length=255)
     config_data: Dict[str, Any]
+    skip: bool = False 
 
 
 class ConfigurationUpdate(BaseModel):
     """Request model for updating configuration."""
     config_data: Dict[str, Any]
+    skip: Optional[bool] = None 
 
 
 class JobCreate(BaseModel):
@@ -53,7 +55,7 @@ class YAMLUpload(BaseModel):
     auto_submit: bool = True
 
 
-# Response Models <TODO>
+# Response Models
 class JobStatusInfo(BaseModel):
     """Job status information."""
     job_id: str
@@ -85,6 +87,8 @@ class JobResponse(BaseModel):
 class JobDetailResponse(JobResponse):
     """Detailed job response with metrics."""
     configuration_name: Optional[str] = None
+    configuration_version: Optional[int] = None 
+    configuration_skip: Optional[bool] = None
     job_status: Optional[JobStatusInfo] = None
     metrics: Optional[Dict[str, Any]] = None
     poll_count: int = 0
@@ -98,6 +102,7 @@ class ConfigurationResponse(BaseModel):
     config_name: str
     config_data: Dict[str, Any]
     is_active: bool
+    skip: bool
     version: int
     created_ts: datetime
     updated_ts: datetime
@@ -128,6 +133,7 @@ class BatchSummaryResponse(BatchResponse):
     progress_percentage: float
     configurations: Optional[List[ConfigurationResponse]] = None
     jobs: Optional[List[JobResponse]] = None
+    configuration_completion: Optional[Dict[str, str]] = None
 
 
 class SubmissionResponse(BaseModel):

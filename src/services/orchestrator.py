@@ -29,7 +29,7 @@ class Orchestrator:
     
     def submit_batch_jobs(self, batch_id: int) -> Dict[str, Any]:
         """
-        Submit all jobs for an batch.
+        Submit all jobs for a batch.
         
         Args:
             batch_id: Batch ID
@@ -42,6 +42,7 @@ class Orchestrator:
         with get_db_session() as db:
             batch_repo = BatchRepository(db)
             job_repo = JobRepository(db)
+            config_repo = ConfigurationRepository(db)
             
             # Get batch
             batch = batch_repo.get(batch_id)
@@ -67,6 +68,13 @@ class Orchestrator:
             # Submit each job
             for job in jobs:
                 try:
+                    # Check if configuration is marked to skip
+                    config = config_repo.get(job.configuration_id)
+                    if config and config.skip:
+                        self.logger.info(f"Skipping job {job.id} - configuration marked as skip")
+                        results["skipped"] += 1
+                        continue
+                    
                     if job.status != constants.JobStatus.PENDING.value:
                         self.logger.info(f"Skipping job {job.id} - already {job.status}")
                         results["skipped"] += 1
@@ -90,7 +98,7 @@ class Orchestrator:
     
     def cancel_batch(self, batch_id: int) -> Dict[str, Any]:
         """
-        Cancel an batch and all its jobs.
+        Cancel a batch and all its jobs.
         
         Args:
             batch_id: Batch ID
@@ -147,8 +155,8 @@ class Orchestrator:
         Resubmit a failed job.
 
         Resubmitting a job involves the following steps:
-            1. Create a new configuration if override provided
-            2. Create a new job with the same batch and configuration
+            1. Create a new version of configuration if override provided
+            2. Create a new job with the same batch and new/same configuration
             3. Set the parent job reference
             4. Update the original job to cancelled
             5. Update the batch to running if needed
@@ -178,15 +186,17 @@ class Orchestrator:
                     f"Can only resubmit failed or cancelled jobs, current status: {original_job.status}"
                 )
                         
-            # Create new configuration if override provided
+            # Create new configuration version if override provided
             if config_override:
-                logger.info(f"Creating new configuration {original_job.configuration.config_name}_resubmit for job {job_id} resubmit")
-                config = config_repo.create_configuration(
-                    original_job.batch_id,
-                    f"{original_job.configuration.config_name}_resubmit",
+                logger.info(f"Creating new version of configuration {original_job.configuration.config_name} for job {job_id} resubmit")
+                
+                # Create new version with same name but incremented version
+                config = config_repo.create_new_version(
+                    original_job.configuration_id,
                     config_override
                 )
                 config_id = config.id
+                logger.info(f"Created configuration version {config.version} with ID {config.id}")
             else:
                 # Use original configuration if no override provided
                 logger.info(f"Using original configuration {original_job.configuration_id} for job {job_id} resubmit")
@@ -229,7 +239,7 @@ class Orchestrator:
     
     def get_batch_progress(self, batch_id: int) -> Dict[str, Any]:
         """
-        Get detailed progress of an batch.
+        Get detailed progress of a batch.
         
         Args:
             batch_id: Batch ID
@@ -240,6 +250,7 @@ class Orchestrator:
         with get_db_session() as db:
             batch_repo = BatchRepository(db)
             job_repo = JobRepository(db)
+            config_repo = ConfigurationRepository(db)
             
             # Get batch summary
             summary = batch_repo.get_batch_summary(batch_id)
@@ -255,12 +266,32 @@ class Orchestrator:
                 job_details.append({
                     "job_id": job.id,
                     "configuration": job.configuration.config_name if job.configuration else None,
+                    "configuration_version": job.configuration.version if job.configuration else None,
+                    "configuration_skip": job.configuration.skip if job.configuration else None,
                     "status": job.status,
                     "workflow_id": job.workflow_id,
                     "metrics": metrics
-                })         
+                })
+            
+            # Get configuration completion status
+            configs = config_repo.get_by_batch(batch_id, active_only=False)
+            config_completion = {}
+            
+            for config in configs:
+                if config.skip:
+                    config_completion[config.config_name] = "skipped"
+                else:
+                    # Check if this config has any completed jobs
+                    completed_jobs = [j for j in jobs 
+                                    if j.configuration_id == config.id 
+                                    and j.status == constants.JobStatus.COMPLETED.value]
+                    if completed_jobs:
+                        config_completion[config.config_name] = "completed"
+                    else:
+                        config_completion[config.config_name] = "incomplete"
            
             return {
                 "batch": summary,
                 "jobs": job_details,
+                "configuration_completion": config_completion
             }
