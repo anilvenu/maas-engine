@@ -23,12 +23,12 @@ async def test_api():
         response = await client.get(f"{base_url}/api/system/health")
         print(f"   Health: {response.json()}")
         
-        # 2. Create analysis from YAML
-        print("\n2. Creating analysis from YAML...")
+        # 2. Create batch from YAML
+        print("\n2. Creating batch from YAML...")
         yaml_data = {
             "yaml_content": {
-                "analysis": {
-                    "name": "API Test Analysis",
+                "batch": {
+                    "name": "API Test Batch",
                     "description": "Testing via API",
                     "configurations": [
                         {
@@ -43,38 +43,38 @@ async def test_api():
         }
         
         response = await client.post(
-            f"{base_url}/api/analysis/from-yaml",
+            f"{base_url}/api/batch",
             json=yaml_data
         )
         if response.status_code == 200:
-            analysis = response.json()
-            analysis_id = analysis["id"]
-            print(f"   Created analysis: {analysis_id}")
+            batch = response.json()
+            batch_id = batch["id"]
+            print(f"   Created batch: {batch_id}")
         else:
             print(f"   Error: {response.status_code} - {response.text}")
             return
         
-        # 3. Get analysis details
-        print("\n3. Getting analysis details...")
-        response = await client.get(f"{base_url}/api/analysis/{analysis_id}")
+        # 3. Get batch details
+        print("\n3. Getting batch details...")
+        response = await client.get(f"{base_url}/api/batch/{batch_id}")
         print(f"   Status: {response.json()['status']}")
         print(f"   Jobs: {response.json()['total_jobs']}")
         
         # 4. Submit jobs
         print("\n4. Submitting jobs...")
-        response = await client.post(f"{base_url}/api/analysis/{analysis_id}/submit")
+        response = await client.post(f"{base_url}/api/batch/{batch_id}/submit")
         print(f"   Submission result: {response.json()}")
         
         # 5. Get progress
         print("\n5. Getting progress...")
         await asyncio.sleep(2)  # Wait for processing
-        response = await client.get(f"{base_url}/api/analysis/{analysis_id}/progress")
+        response = await client.get(f"{base_url}/api/batch/{batch_id}/progress")
         progress = response.json()
         print(f"   Progress: {progress}")
         
         # 6. List jobs
         print("\n6. Listing jobs...")
-        response = await client.get(f"{base_url}/api/jobs/?analysis_id={analysis_id}")
+        response = await client.get(f"{base_url}/api/jobs/?batch_id={batch_id}")
         jobs = response.json()
         for job in jobs[:3]:  # Show first 3
             print(f"     - Job {job['id']}: {job['status']}")
@@ -83,7 +83,7 @@ async def test_api():
         print("\n7. Getting system stats...")
         response = await client.get(f"{base_url}/api/system/stats")
         stats = response.json()
-        print(f"   Analysis: {stats['analysis']}")
+        print(f"   Batch: {stats['batch']}")
         print(f"   Jobs: {stats['jobs']}")
         
         print("\n=== API Test Complete ===\n")

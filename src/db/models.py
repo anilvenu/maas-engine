@@ -8,31 +8,39 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime, UTC
-
-from src.core.constants import JobStatus, AnalysisStatus, RecoveryType
+import enum
+import src.core.constants as constants
 
 Base = declarative_base()
 
 
-class Analysis(Base):
-    """Analysis model."""
-    __tablename__ = "irp_analysis"
-    
+class Batch(Base):
+    """Batch model."""
+    __tablename__ = "irp_batch"
+
+    ALL_STATUSES = ["pending", "running", "completed", "failed", "cancelled"]
+    ACTIVE_STATUSES = ["pending", "running"]
+    TERMINAL_STATUSES = ["completed", "cancelled"]
+    FAILED_STATUSES = ["failed"]
+
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    status = Column(Enum(AnalysisStatus, values_callable=lambda x: [e.value for e in x]), default=AnalysisStatus.PENDING.value)
+
+    # Fixed: Added name parameter for PostgreSQL ENUM
+    status = Column(Enum(*ALL_STATUSES, name='batch_status_enum'), default="pending", nullable=False)
+
     yaml_config = Column(JSON)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())
     updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     completed_ts = Column(DateTime(timezone=True))
     
     # Relationships
-    configurations = relationship("Configuration", back_populates="analysis", cascade="all, delete-orphan")
-    jobs = relationship("Job", back_populates="analysis", cascade="all, delete-orphan")
+    configurations = relationship("Configuration", back_populates="batch", cascade="all, delete-orphan")
+    jobs = relationship("Job", back_populates="batch", cascade="all, delete-orphan")
     
     def __repr__(self):
-        return f"<Analysis(id={self.id}, name={self.name}, status={self.status})>"
+        return f"<Batch(id={self.id}, name={self.name}, status={self.status})>"
 
 
 class Configuration(Base):
@@ -40,57 +48,77 @@ class Configuration(Base):
     __tablename__ = "irp_configuration"
     
     id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey("irp_analysis.id", ondelete="CASCADE"), nullable=False)
+    batch_id = Column(Integer, ForeignKey("irp_batch.id", ondelete="CASCADE"), nullable=False)
     config_name = Column(String(255), nullable=False)
     config_data = Column(JSON, nullable=False)
     is_active = Column(Boolean, default=True)
+    skip = Column(Boolean, default=False, nullable=False)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())
     updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    version = Column(Integer, default=1)
+    version = Column(Integer, default=1, nullable=False)
     
     # Relationships
-    analysis = relationship("Analysis", back_populates="configurations")
+    batch = relationship("Batch", back_populates="configurations")
     jobs = relationship("Job", back_populates="configuration")
     
-    # Constraints
+    # Constraints - unique batch_id, config_name, version
     __table_args__ = (
-        UniqueConstraint('analysis_id', 'config_name', 'version', name='unique_active_config_per_analysis'),
+        UniqueConstraint('batch_id', 'config_name', 'version', 
+                        name='uq_batch_config_version'),
+        Index('idx_configuration_active', 'batch_id', 'config_name', 'is_active'),
     )
     
     def __repr__(self):
-        return f"<Configuration(id={self.id}, name={self.config_name}, version={self.version})>"
+        return f"<Configuration(id={self.id}, name={self.config_name}, version={self.version}, skip={self.skip})>"
 
 
 class Job(Base):
     """Job model."""
     __tablename__ = "irp_job"
-    
+
+    ALL_STATUSES = ["pending", "submitted", "queued", "running", "completed", "failed", "cancelled"]
+    INITIAL_STATUSES = ["pending"]
+    ACTIVE_STATUSES = ["pending", "submitted", "queued", "running"]
+    FAILED_STATUSES = ["failed"]
+    TERMINAL_STATUSES = ["completed", "cancelled"]
+    RESUBMITTABLE_STATUSES = ["failed", "cancelled"]
+
     id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey("irp_analysis.id", ondelete="CASCADE"), nullable=False)
-    configuration_id = Column(Integer, ForeignKey("irp_configuration.id"), nullable=False)
-    workflow_id = Column(String(255), unique=True)
-    status = Column(Enum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.PLANNED.value)
+    batch_id = Column(Integer, 
+                      ForeignKey("irp_batch.id", ondelete="CASCADE"), 
+                      nullable=False)
+    configuration_id = Column(Integer, 
+                              ForeignKey("irp_configuration.id"), 
+                              nullable=False)
+    workflow_id = Column(String(255), 
+                         unique=True)
+    status = Column(Enum(*ALL_STATUSES, name="job_status"), 
+                         default="pending", 
+                         nullable=False)
     retry_count = Column(Integer, default=0)
     last_error = Column(Text)
-    created_ts = Column(DateTime(timezone=True), server_default=func.now())
+    created_ts = Column(DateTime(timezone=True), 
+                        server_default=func.now())
     initiation_ts = Column(DateTime(timezone=True))
-    updated_ts = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_ts = Column(DateTime(timezone=True), 
+                        server_default=func.now(), 
+                        onupdate=func.now())
     completed_ts = Column(DateTime(timezone=True))
     parent_job_id = Column(Integer, ForeignKey("irp_job.id"))
     celery_task_id = Column(String(255))
     last_poll_ts = Column(DateTime(timezone=True))
     
     # Relationships
-    analysis = relationship("Analysis", back_populates="jobs")
+    batch = relationship("Batch", back_populates="jobs")
     configuration = relationship("Configuration", back_populates="jobs")
     parent_job = relationship("Job", remote_side=[id])
-    workflow_statuses = relationship("WorkflowStatus", back_populates="job", cascade="all, delete-orphan")
+    job_statuses = relationship("JobStatus", back_populates="job", cascade="all, delete-orphan")
     retry_history = relationship("RetryHistory", back_populates="job", cascade="all, delete-orphan")
     
     # Indexes
     __table_args__ = (
         Index('idx_job_status', 'status'),
-        Index('idx_job_analysis_id', 'analysis_id'),
+        Index('idx_job_batch_id', 'batch_id'),
         Index('idx_job_workflow_id', 'workflow_id'),
         Index('idx_job_updated_ts', 'updated_ts'),
     )
@@ -115,9 +143,33 @@ class Job(Base):
         return 0
 
 
-class WorkflowStatus(Base):
-    """Workflow status tracking model."""
-    __tablename__ = "irp_workflow_status"
+class BatchStatus(Base):
+    """Batch status tracking model."""
+    __tablename__ = "irp_batch_status"
+    
+    id = Column(Integer, primary_key=True)
+    batch_id = Column(Integer, ForeignKey("irp_batch.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), nullable=False)
+    batch_summary = Column(JSON)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    comments = Column(String(255))
+    
+    # Relationships
+    batch = relationship("Batch")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_batch_status_batch_id', 'batch_id'),
+        Index('idx_batch_status_updated_at', 'updated_at'),
+    )
+    
+    def __repr__(self):
+        return f"<BatchStatus(id={self.id}, batch_id={self.batch_id}, status={self.status})>"
+
+
+class JobStatus(Base):
+    """Job status tracking model."""
+    __tablename__ = "irp_job_status"
     
     id = Column(Integer, primary_key=True)
     job_id = Column(Integer, ForeignKey("irp_job.id", ondelete="CASCADE"), nullable=False)
@@ -128,16 +180,16 @@ class WorkflowStatus(Base):
     poll_duration_ms = Column(Integer)
     
     # Relationships
-    job = relationship("Job", back_populates="workflow_statuses")
+    job = relationship("Job", back_populates="job_statuses")
     
     # Indexes
     __table_args__ = (
-        Index('idx_workflow_status_job_id', 'job_id'),
-        Index('idx_workflow_status_polled_at', 'polled_at'),
+        Index('idx_job_status_job_id', 'job_id'),
+        Index('idx_job_status_polled_at', 'polled_at'),
     )
     
     def __repr__(self):
-        return f"<WorkflowStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
+        return f"<JobStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
 
 
 class RetryHistory(Base):
@@ -169,8 +221,8 @@ class SystemRecovery(Base):
     """System recovery tracking model."""
     __tablename__ = "irp_system_recovery"
     
-    id = Column(Integer, primary_key=True)
-    recovery_type = Column(Enum(RecoveryType), nullable=False)
+    id = Column(Integer, primary_key=True)   
+    recovery_type = Column(Enum(constants.RecoveryType, name='recovery_type_enum'), nullable=False)
     jobs_recovered = Column(Integer, default=0)
     jobs_resubmitted = Column(Integer, default=0)
     jobs_resumed_polling = Column(Integer, default=0)
@@ -180,26 +232,3 @@ class SystemRecovery(Base):
     
     def __repr__(self):
         return f"<SystemRecovery(id={self.id}, type={self.recovery_type}, recovered={self.jobs_recovered})>"
-
-
-class CeleryTaskState(Base):
-    """Celery task state for recovery."""
-    __tablename__ = "irp_celery_task_state"
-    
-    id = Column(Integer, primary_key=True)
-    task_id = Column(String(255), unique=True, nullable=False)
-    task_name = Column(String(255), nullable=False)
-    job_id = Column(Integer, ForeignKey("irp_job.id"))
-    task_args = Column(JSON)
-    task_kwargs = Column(JSON)
-    eta = Column(DateTime(timezone=True))
-    expires = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Indexes
-    __table_args__ = (
-        Index('idx_celery_task_job_id', 'job_id'),
-    )
-    
-    def __repr__(self):
-        return f"<CeleryTaskState(id={self.id}, task_id={self.task_id}, job_id={self.job_id})>"

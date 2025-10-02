@@ -5,8 +5,8 @@ from enum import Enum
 
 class JobStatus(str, Enum):
     """Job status enumeration."""
-    PLANNED = "planned"
-    INITIATED = "initiated"
+    PENDING = "pending"
+    SUBMITTED = "submitted"
     QUEUED = "queued"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -23,14 +23,14 @@ class JobStatus(str, Enum):
     @classmethod
     def is_active(cls, status: str) -> bool:
         """Check if status indicates active processing."""
-        return status in [cls.PLANNED.value, 
-                          cls.INITIATED.value, 
+        return status in [cls.PENDING.value, 
+                          cls.SUBMITTED.value, 
                           cls.QUEUED.value, 
                           cls.RUNNING.value]
 
 
-class AnalysisStatus(str, Enum):
-    """Analysis status enumeration."""
+class BatchStatus(str, Enum):
+    """Batch status enumeration."""
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -74,7 +74,7 @@ class HTTPStatusCode:
 class MoodyAPIEndpoints:
     """Mock Moody's API endpoints."""
     SUBMIT_WORKFLOW = "/workflows"
-    WORKFLOW_STATUS = "/workflows/{workflow_id}/status"
+    JOB_STATUS = "/workflows/{workflow_id}/status"
     CANCEL_WORKFLOW = "/workflows/{workflow_id}/cancel"
 
 
@@ -82,9 +82,9 @@ class MoodyAPIEndpoints:
 class ErrorMessages:
     """Standard error messages."""
     JOB_NOT_FOUND = "Job with ID {job_id} not found"
-    ANALYSIS_NOT_FOUND = "Analysis with ID {analysis_id} not found"
-    WORKFLOW_SUBMISSION_FAILED = "Failed to submit workflow: {error}"
-    POLL_FAILED = "Failed to poll workflow status: {error}"
+    BATCH_NOT_FOUND = "Batch with ID {batch_id} not found"
+    JOB_SUBMISSION_FAILED = "Failed to submit job: {error}"
+    POLL_FAILED = "Failed to poll job status: {error}"
     RECOVERY_FAILED = "Recovery process failed: {error}"
     INVALID_STATUS_TRANSITION = "Invalid status transition from {from_status} to {to_status}"
     MAX_RETRIES_EXCEEDED = "Maximum retry attempts ({max_retries}) exceeded"

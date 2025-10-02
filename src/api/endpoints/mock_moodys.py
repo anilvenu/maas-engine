@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Request/Response Models
 class WorkflowSubmissionRequest(BaseModel):
     """Request model for workflow submission."""
-    analysis_id: int
+    batch_id: int
     configuration_id: int
     model_name: str
     parameters: Dict[str, Any]
@@ -185,7 +185,7 @@ async def submit_workflow(request: WorkflowSubmissionRequest):
 
 
 @app.get("/mock/workflows/{workflow_id}/status", response_model=WorkflowStatusResponse)
-async def get_workflow_status(workflow_id: str):
+async def get_job_status(workflow_id: str):
     """
     Get workflow status.
     Simulates state progression and occasional errors.

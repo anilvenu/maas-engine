@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 
 from src.db.session import get_db_session
-from src.db.repositories.analysis_repository import AnalysisRepository
+from src.db.repositories.batch_repository import BatchRepository
 from src.db.repositories.configuration_repository import ConfigurationRepository
 from src.db.repositories.job_repository import JobRepository
 from src.services.orchestrator import Orchestrator
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class YAMLProcessor:
-    """Process YAML configuration and create analysis with jobs."""
+    """Process YAML configuration and create batch with jobs."""
     
     def __init__(self):
         """Initialize YAML processor."""
@@ -43,28 +43,28 @@ class YAMLProcessor:
         Raises:
             ConfigurationException: If validation fails
         """
-        required_fields = ['analysis', 'analysis.name', 'analysis.configurations']
+        required_fields = ['batch', 'batch.name', 'batch.configurations']
         
         # Check required fields
-        if 'analysis' not in yaml_data:
-            raise ConfigurationException("Missing 'analysis' section in YAML")
+        if 'batch' not in yaml_data:
+            raise ConfigurationException("Missing 'batch' section in YAML")
         
-        analysis = yaml_data['analysis']
+        batch = yaml_data['batch']
         
-        if 'name' not in analysis:
-            raise ConfigurationException("Missing 'name' in analysis section")
+        if 'name' not in batch:
+            raise ConfigurationException("Missing 'name' in batch section")
         
-        if 'configurations' not in analysis:
-            raise ConfigurationException("Missing 'configurations' in analysis section")
+        if 'configurations' not in batch:
+            raise ConfigurationException("Missing 'configurations' in batch section")
         
-        if not isinstance(analysis['configurations'], list):
+        if not isinstance(batch['configurations'], list):
             raise ConfigurationException("'configurations' must be a list")
         
-        if len(analysis['configurations']) == 0:
+        if len(batch['configurations']) == 0:
             raise ConfigurationException("At least one configuration is required")
         
         # Validate each configuration
-        for i, config in enumerate(analysis['configurations']):
+        for i, config in enumerate(batch['configurations']):
             if 'name' not in config:
                 raise ConfigurationException(f"Configuration {i} missing 'name'")
             
@@ -77,7 +77,7 @@ class YAMLProcessor:
     def process_yaml_data(self, yaml_data: Dict[str, Any], 
                          auto_submit: bool = True) -> Dict[str, Any]:
         """
-        Process YAML data and create analysis with jobs.
+        Process YAML data and create batch with jobs.
         
         Args:
             yaml_data: Parsed YAML data
@@ -86,28 +86,33 @@ class YAMLProcessor:
         Returns:
             Dict with processing results
         """
-        analysis_config = yaml_data['analysis']
+        self.logger.info(f"Processing YAML data: {yaml_data}")
+
+        # Validate YAML
+        self._validate_yaml(yaml_data)
+
+        batch_config = yaml_data['batch']
         
         with get_db_session() as db:
-            analysis_repo = AnalysisRepository(db)
+            batch_repo = BatchRepository(db)
             config_repo = ConfigurationRepository(db)
             job_repo = JobRepository(db)
             
-            # Create analysis
-            analysis = analysis_repo.create_from_yaml(
-                name=analysis_config['name'],
-                description=analysis_config.get('description', ''),
+            # Create batch
+            batch = batch_repo.create_batch(
+                name=batch_config['name'],
+                description=batch_config.get('description', ''),
                 yaml_config=yaml_data
             )
             
-            self.logger.info(f"Created analysis {analysis.id}: {analysis.name}")
+            self.logger.info(f"Created batch {batch.id}: {batch.name}")
             
             # Create configurations and jobs
             job_ids = []
-            for config_data in analysis_config['configurations']:
+            for config_data in batch_config['configurations']:
                 # Create configuration
                 config = config_repo.create_configuration(
-                    analysis_id=analysis.id,
+                    batch_id=batch.id,
                     name=config_data['name'],
                     config_data=config_data
                 )
@@ -116,7 +121,7 @@ class YAMLProcessor:
                 
                 # Create job for this configuration
                 job = job_repo.create_job(
-                    analysis_id=analysis.id,
+                    batch_id=batch.id,
                     configuration_id=config.id
                 )
                 
@@ -126,9 +131,9 @@ class YAMLProcessor:
             db.commit()
             
             results = {
-                "analysis_id": analysis.id,
-                "analysis_name": analysis.name,
-                "configurations_created": len(analysis_config['configurations']),
+                "batch_id": batch.id,
+                "batch_name": batch.name,
+                "configurations_created": len(batch_config['configurations']),
                 "jobs_created": len(job_ids),
                 "job_ids": job_ids,
                 "status": "created"
@@ -136,8 +141,8 @@ class YAMLProcessor:
             
             # Auto-submit jobs if requested
             if auto_submit:
-                self.logger.info(f"Auto-submitting jobs for analysis {analysis.id}")
-                submission_results = self.orchestrator.submit_analysis_jobs(analysis.id)
+                self.logger.info(f"Auto-submitting jobs for batch {batch.id}")
+                submission_results = self.orchestrator.submit_batch_jobs(batch.id)
                 results["submission"] = submission_results
                 results["status"] = "submitted"
             
@@ -146,7 +151,7 @@ class YAMLProcessor:
     def process_yaml_file(self, yaml_path: str, 
                          auto_submit: bool = True) -> Dict[str, Any]:
         """
-        Process YAML file and create analysis with jobs.
+        Process YAML file and create batch with jobs.
         
         Args:
             yaml_path: Path to YAML file
@@ -175,7 +180,7 @@ def main():
     """Main entry point for initiator."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Process YAML and create analysis with jobs")
+    parser = argparse.ArgumentParser(description="Process YAML and create batch with jobs")
     parser.add_argument("yaml_path", help="Path to YAML file or directory")
     parser.add_argument("--submit", action="store_true", help="Submit jobs after creation")
     

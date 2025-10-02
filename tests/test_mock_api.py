@@ -19,7 +19,7 @@ async def test_workflow_lifecycle():
         # 1. Submit workflow
         print("1. Submitting workflow...")
         submission_data = {
-            "analysis_id": 1,
+            "batch_id": 1,
             "configuration_id": 1,
             "model_name": "test_model",
             "parameters": {"param1": "value1"}

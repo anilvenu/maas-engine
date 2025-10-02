@@ -9,11 +9,11 @@ from src.api.dependencies.database import get_db
 from src.api.dependencies.auth import verify_api_key
 
 from src.api.models.schemas import (
-    JobCreate, JobResponse, JobDetailResponse, JobRetry
+    JobCreate, JobResponse, JobDetailResponse, JobResubmit
 )
 from src.db.repositories.job_repository import JobRepository
 from src.services.orchestrator import Orchestrator
-from src.tasks.job_tasks import submit_job, poll_workflow_status, cancel_job
+from src.tasks.job_tasks import submit_job, poll_job_status, cancel_job
 from src.core.exceptions import JobNotFoundException
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
 @router.get("/", response_model=List[JobResponse])
 def list_jobs(
-    analysis_id: Optional[int] = Query(None, description="Filter by analysis ID"),
+    batch_id: Optional[int] = Query(None, description="Filter by batch ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
     skip: int = 0,
     limit: int = 1000,
@@ -32,15 +32,10 @@ def list_jobs(
     
     query = db.query(repo.model)
     
-    print(analysis_id, status)
-    print(f"   Query before filters: {query}")
-
-    if analysis_id:
-        query = query.filter(repo.model.analysis_id == analysis_id)
+    if batch_id:
+        query = query.filter(repo.model.batch_id == batch_id)
     if status:
         query = query.filter(repo.model.status == status)
-
-    print(f"   Query after filters: {query}")
 
     jobs = query.offset(skip).limit(limit).all()
        
@@ -51,15 +46,15 @@ def list_jobs(
              status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(verify_api_key)])
 def create_job(
-    analysis_id: int,
+    batch_id: int,
     job: JobCreate,
     db: Session = Depends(get_db)
 ):
-    """Create a new job for an analysis."""
+    """Create a new job for an batch."""
     repo = JobRepository(db)
     
     db_job = repo.create_job(
-        analysis_id=analysis_id,
+        batch_id=batch_id,
         configuration_id=job.configuration_id
     )
     
@@ -86,7 +81,7 @@ def get_job(
     
     response = JobDetailResponse(
         id=job.id,
-        analysis_id=job.analysis_id,
+        batch_id=job.batch_id,
         configuration_id=job.configuration_id,
         workflow_id=job.workflow_id,
         status=job.status,
@@ -97,8 +92,10 @@ def get_job(
         updated_ts=job.updated_ts,
         completed_ts=job.completed_ts,
         configuration_name=job.configuration.config_name if job.configuration else None,
+        configuration_version=job.configuration.version if job.configuration else None,
+        configuration_skip=job.configuration.skip if job.configuration else None,
         metrics=metrics,
-        poll_count=len(job.workflow_statuses) if job.workflow_statuses else 0
+        poll_count=len(job.job_statuses) if job.job_statuses else 0
     )
     
     return response
@@ -120,7 +117,7 @@ def initiate_job(
             detail=f"Job {job_id} not found"
         )
     
-    if job.status != "planned":
+    if job.status != "pending":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Job is already {job.status}"
@@ -168,20 +165,20 @@ def cancel_job_endpoint(
     }
 
 
-@router.post("/{job_id}/retry", response_model=JobResponse,
+@router.post("/{job_id}/resubmit", response_model=JobResponse,
              dependencies=[Depends(verify_api_key)])
-def retry_job(
+def resubmit_job(
     job_id: int,
-    retry_config: JobRetry,
+    resubmit_config: JobResubmit,
     db: Session = Depends(get_db)
 ):
-    """Retry a failed job."""
+    """Resubmit a failed job."""
     orchestrator = Orchestrator()
     
     try:
-        result = orchestrator.retry_failed_job(
+        result = orchestrator.resubmit_failed_job(
             job_id,
-            retry_config.config_override
+            resubmit_config.config_override
         )
         
         # Get the new job
@@ -220,7 +217,7 @@ def force_poll_job(
         )
     
     # Poll via Celery
-    task = poll_workflow_status.delay(job_id, job.workflow_id)
+    task = poll_job_status.delay(job_id, job.workflow_id)
     
     return {
         "job_id": job_id,

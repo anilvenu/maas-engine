@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 import logging
 from datetime import datetime, UTC
 
-from src.api.endpoints import analysis, jobs, system
+from src.api.endpoints import batch, jobs, system
 from src.core.config import settings
 from src.utils.logger import setup_logging
 
@@ -72,7 +72,7 @@ async def internal_error_handler(request: Request, exc):
 
 
 # Include routers
-app.include_router(analysis.router)
+app.include_router(batch.router)
 app.include_router(jobs.router)
 app.include_router(system.router)
 
@@ -87,7 +87,7 @@ def root():
         "status": "running",
         "timestamp": datetime.now(UTC),
         "endpoints": {
-            "analysis": "/api/analysis",
+            "batch": "/api/batch",
             "jobs": "/api/jobs",
             "system": "/api/system",
             "health": "/api/system/health",
@@ -104,8 +104,8 @@ def api_info():
         "version": "1.0.0",
         "endpoints": [
             {
-                "path": "/api/analysis",
-                "description": "Analysis management"
+                "path": "/api/batch",
+                "description": "Batch management"
             },
             {
                 "path": "/api/jobs", 

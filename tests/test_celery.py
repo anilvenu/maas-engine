@@ -5,11 +5,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import time
-from src.tasks.job_tasks import submit_job, poll_workflow_status
-from src.tasks.analysis_tasks import check_analysis_completion
+from src.tasks.job_tasks import submit_job
+from src.tasks.batch_tasks import check_batch_completion
 from src.db.session import get_db_session
-from src.db.models import Analysis, Configuration, Job
-from src.core.constants import AnalysisStatus, JobStatus
+from src.db.models import Batch, Configuration, Job
+import src.core.constants as constants
+
 import json
 
 
@@ -19,22 +20,22 @@ def test_celery_tasks():
     print("\n=== Testing Celery Tasks ===\n")
     
     with get_db_session() as db:
-        # 1. Create test analysis
-        print("1. Creating test analysis...")
-        analysis = Analysis(
-            name="Celery Test Analysis",
+        # 1. Create test batch
+        print("1. Creating test batch...")
+        batch = Batch(
+            name="Celery Test Batch",
             description="Testing Celery tasks",
-            status=AnalysisStatus.PENDING.value,
+            status=constants.BatchStatus.PENDING.value,
             yaml_config={"test": True}
         )
-        db.add(analysis)
+        db.add(batch)
         db.commit()
-        print(f"   Created analysis ID: {analysis.id}")
+        print(f"   Created batch ID: {batch.id}")
         
         # 2. Create test configuration  
         print("\n2. Creating test configuration...")
         config = Configuration(
-            analysis_id=analysis.id,
+            batch_id=batch.id,
             config_name="Test Config",
             config_data={
                 "model": "test_model",
@@ -48,9 +49,9 @@ def test_celery_tasks():
         # 3. Create test job
         print("\n3. Creating test job...")
         job = Job(
-            analysis_id=analysis.id,
+            batch_id=batch.id,
             configuration_id=config.id,
-            status=JobStatus.PLANNED.value
+            status=constants.JobStatus.PENDING.value
         )
         db.add(job)
         db.commit()
@@ -68,9 +69,9 @@ def test_celery_tasks():
         except Exception as e:
             print(f"   Error: {e}")
         
-        # 5. Check analysis completion
-        print("\n5. Checking analysis completion...")
-        result = check_analysis_completion.delay(analysis.id)
+        # 5. Check batch completion
+        print("\n5. Checking batch completion...")
+        result = check_batch_completion.delay(batch.id)
         try:
             task_result = result.get(timeout=5)
             print(f"   Result: {json.dumps(task_result, indent=2)}")

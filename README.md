@@ -18,7 +18,7 @@
 │  │   Orchestration Layer               │    │
 │  │   - Job Submission Proxy            │    │
 │  │   - Status Tracker                  │    │
-│  │   - Retry Manager                   │    │
+│  │   - Resubmit Manager                   │    │
 │  └────────┬────────────────────────────┘    │
 │           │                                 │
 │  ┌────────▼────────┐  ┌──────────────────┐  │
@@ -37,8 +37,8 @@
 
 - **FastAPI Management Service**: CRUD operations, job control, status viewing
 - **Orchestration Layer**: Job submission proxy, implements retry logic, tracks all operations
-- **Celery Workers**: Execute async tasks (submission, polling, analysis checking)
-- **Celery Beat**: Scheduled tasks (recovery polls, analysis completion checks)
+- **Celery Workers**: Execute async tasks (submission, polling, batch checking)
+- **Celery Beat**: Scheduled tasks (recovery polls, batch completion checks)
 - **PostgreSQL**: Persistent state storage with full audit trail
 - Redis: Job queue, result backend, distributed locks
 
@@ -50,20 +50,20 @@
 **Submission Flow**
 
 ```
-YAML Upload → Parse → Create Analysis → Create Configurations 
-→ Create Jobs (status: planned) → Queue Submission Tasks
-→ Submit to Moody's (via Orchestration Layer) → Update to initiated
+YAML Upload → Parse → Create Batch → Create Configurations 
+→ Create Jobs (status: pending) → Queue Submission Tasks
+→ Submit to Moody's (via Orchestration Layer) → Update to submitted
 → Store Celery Task ID → Schedule Polling Tasks
 ```
 
 ```
                deploy
         ┌──────────┐
-        │ planned  │
+        │ pending  │
         └────┬─────┘
              │ initiate
         ┌────▼─────┐
-        │initiated │
+        │submitted │
         └────┬─────┘
              │ submit & response
         ┌────▼─────┐
@@ -79,9 +79,9 @@ YAML Upload → Parse → Create Analysis → Create Configurations
 ┌────▼─────┐        ┌─────▼─────┐      ┌───────────┐
 │cancelled │        │ completed │      │  failed   │
 └──────────┘        └───────────┘      └─────┬─────┘
-                                             │ retry
+                                             │ resubmit
                                        ┌─────▼─────┐
-                                       │ planned   │
+                                       │ pending   │
                                        │(new job)  │
                                        └───────────┘
 
@@ -93,10 +93,10 @@ Initial Poll: 30 seconds after submission
 Subsequent Polls: Based on job status
 Max poll duration: configurable
 
-**Analysis Completion Check**
+**Batch Completion Check**
 
 Runs every N minutes via Celery Beat
-Checks all "running" analysis
+Checks all "running" batches
 Updates to "completed" when all non-cancelled jobs are finished
 
 Edge cases:
@@ -236,7 +236,7 @@ Cached settings for performance
 ### Constants & Enums 
 ```src/core/constants.py```
 
-Job and Analysis status enums with helper methods
+Job and Batch status enums with helper methods
 HTTP status codes for retry logic
 Standard error messages
 
@@ -288,7 +288,7 @@ uv run python scripts/test_celery.py
 
 ## Core Application
 
-wires together repositories, services, and processors into a job orchestration system. The goal is to transform YAML-defined analysis into persisted database entities, spawn jobs, orchestrate execution, and monitor progress through completion.
+wires together repositories, services, and processors into a job orchestration system. The goal is to transform YAML-defined batch into persisted database entities, spawn jobs, orchestrate execution, and monitor progress through completion.
 
 - Repository layer
 - Orchestrator service
@@ -302,32 +302,32 @@ Repositories encapsulate all database access logic and provide a clean, testable
 - Provides common CRUD operations (get, get_all, create, update, delete, exists).
 - Keeps SQLAlchemy session handling encapsulated.
 
-**AnalysisRepository**
+**BatchRepository**
 
-Focuses on Analysis lifecycle:
+Focuses on Batch lifecycle:
 
-- Retrieve analysis with jobs.
-- Get active analysis (pending, running).
-- Produce analysis summaries including job counts per status.
-- Create new analysis from YAML.
+- Retrieve batches with jobs.
+- Get active batches (pending, running).
+- Produce batch summaries including job counts per status.
+- Create new batch from YAML.
 - Update status and mark completion timestamps.
-- Cancel an analysis and cascade cancel jobs.
+- Cancel a batch and cascade cancel jobs.
 
 **JobRepository**
 
 Manages Job lifecycle:
 
-- Fetch jobs with details (config, workflow, retry history).
+- Fetch jobs with details (config, job, resubmit history).
 - Track active/stale jobs.
 - Update statuses with timestamps.
-- Record workflow polls and retry attempts.
+- Record job polls and resubmit attempts.
 - Produce metrics (age, time in status, execution duration).
 
 **ConfigurationRepository**
 
 Handles job configurations:
 
-- Fetch active configurations for an analysis.
+- Fetch active configurations for a batch.
 - Create configurations with versioning (increment version on updates).
 - Update configs by creating a new version and deactivating old ones.
 
@@ -357,15 +357,15 @@ uv run python src/initiator.py config/sample_analysis.yaml
 
 
 Repository Pattern: Clean database access with CRUD operations
-Orchestration: Manages entire job lifecycle (submit, cancel, retry, track)
+Orchestration: Manages entire job lifecycle (submit, cancel, resubmit, track)
 YAML Processing: Validates and processes configuration files
 Auto-submission: Creates and optionally submits jobs automatically
-Progress Tracking: Real-time analysis and job metrics
+Progress Tracking: Real-time batch and job metrics
 
 The system can now:
 
 Load a YAML file
-Create analysis and configurations
+Create batch and configurations
 Generate jobs
 Submit them to Mock Moody's
 Track progress automatically
@@ -381,7 +381,7 @@ Testing the APIs
 curl -X POST http://localhost:8001/mock/workflows \
   -H "Content-Type: application/json" \
   -d '{
-    "analysis_id": 1,
+    "batch_id": 1,
     "configuration_id": 1,
     "model_name": "test_model",
     "parameters": {"test": "value"}
@@ -396,8 +396,8 @@ curl http://localhost:8001/mock/stats
 
 API Endpoints:
 
-Analysis: /api/analysis - Full CRUD, submit jobs, track progress
-Jobs: /api/jobs - Create, initiate, cancel, retry, force poll
+Batch: /api/batch - Full CRUD, submit jobs, track progress
+Jobs: /api/jobs - Create, initiate, cancel, resubmit, force poll
 System: /api/system - Health checks, recovery, statistics
 
 
@@ -405,7 +405,7 @@ Key Features:
 
 Complete REST API for all operations
 Auto-generated documentation (Swagger UI)
-Real-time monitoring of jobs and analysis
+Real-time monitoring of jobs and batch
 Health checks for all system components
 YAML upload directly via API
 Progress tracking with percentages and metrics

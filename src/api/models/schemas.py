@@ -8,8 +8,8 @@ from enum import Enum
 
 # Enums
 class JobStatusEnum(str, Enum):
-    planned = "planned"
-    initiated = "initiated"
+    pending = "pending"
+    submitted = "submitted"
     queued = "queued"
     running = "running"
     completed = "completed"
@@ -17,7 +17,7 @@ class JobStatusEnum(str, Enum):
     cancelled = "cancelled"
 
 
-class AnalysisStatusEnum(str, Enum):
+class BatchStatusEnum(str, Enum):
     pending = "pending"
     running = "running"
     completed = "completed"
@@ -30,11 +30,13 @@ class ConfigurationCreate(BaseModel):
     """Request model for creating configuration."""
     config_name: str = Field(..., min_length=1, max_length=255)
     config_data: Dict[str, Any]
+    skip: bool = False 
 
 
 class ConfigurationUpdate(BaseModel):
     """Request model for updating configuration."""
     config_data: Dict[str, Any]
+    skip: Optional[bool] = None 
 
 
 class JobCreate(BaseModel):
@@ -42,8 +44,8 @@ class JobCreate(BaseModel):
     configuration_id: int
 
 
-class JobRetry(BaseModel):
-    """Request model for retrying job."""
+class JobResubmit(BaseModel):
+    """Request model for resubmiting job."""
     config_override: Optional[Dict[str, Any]] = None
 
 
@@ -54,9 +56,9 @@ class YAMLUpload(BaseModel):
 
 
 # Response Models
-class WorkflowStatusInfo(BaseModel):
-    """Workflow status information."""
-    workflow_id: str
+class JobStatusInfo(BaseModel):
+    """Job status information."""
+    job_id: str
     status: str
     progress_percentage: Optional[int] = None
     last_polled: Optional[datetime] = None
@@ -65,7 +67,7 @@ class WorkflowStatusInfo(BaseModel):
 class JobResponse(BaseModel):
     """Response model for job."""
     id: int
-    analysis_id: int
+    batch_id: int
     configuration_id: int
     workflow_id: Optional[str] = None
     status: JobStatusEnum
@@ -85,19 +87,22 @@ class JobResponse(BaseModel):
 class JobDetailResponse(JobResponse):
     """Detailed job response with metrics."""
     configuration_name: Optional[str] = None
-    workflow_status: Optional[WorkflowStatusInfo] = None
+    configuration_version: Optional[int] = None 
+    configuration_skip: Optional[bool] = None
+    job_status: Optional[JobStatusInfo] = None
     metrics: Optional[Dict[str, Any]] = None
     poll_count: int = 0
-    retry_history: Optional[List[Dict[str, Any]]] = None
+    resubmit_history: Optional[List[Dict[str, Any]]] = None
 
 
 class ConfigurationResponse(BaseModel):
     """Response model for configuration."""
     id: int
-    analysis_id: int
+    batch_id: int
     config_name: str
     config_data: Dict[str, Any]
     is_active: bool
+    skip: bool
     version: int
     created_ts: datetime
     updated_ts: datetime
@@ -106,12 +111,12 @@ class ConfigurationResponse(BaseModel):
         orm_mode = True
 
 
-class AnalysisResponse(BaseModel):
-    """Response model for analysis."""
+class BatchResponse(BaseModel):
+    """Response model for batch."""
     id: int
     name: str
     description: Optional[str] = None
-    status: AnalysisStatusEnum
+    status: BatchStatusEnum
     yaml_config: Optional[Dict[str, Any]] = None
     created_ts: datetime
     updated_ts: datetime
@@ -121,13 +126,14 @@ class AnalysisResponse(BaseModel):
         orm_mode = True
 
 
-class AnalysisSummaryResponse(AnalysisResponse):
-    """Analysis summary with statistics."""
+class BatchSummaryResponse(BatchResponse):
+    """Batch summary with statistics."""
     total_jobs: int
     job_status_counts: Dict[str, int]
     progress_percentage: float
     configurations: Optional[List[ConfigurationResponse]] = None
     jobs: Optional[List[JobResponse]] = None
+    configuration_completion: Optional[Dict[str, str]] = None
 
 
 class SubmissionResponse(BaseModel):

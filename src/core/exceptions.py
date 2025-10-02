@@ -11,12 +11,12 @@ class JobNotFoundException(IRPException):
     pass
 
 
-class AnalysisNotFoundException(IRPException):
-    """Raised when an analysis is not found."""
+class BatchNotFoundException(IRPException):
+    """Raised when an batch is not found."""
     pass
 
 
-class WorkflowSubmissionException(IRPException):
+class JobSubmissionException(IRPException):
     """Raised when workflow submission fails."""
     pass
 
