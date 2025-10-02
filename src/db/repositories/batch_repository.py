@@ -78,7 +78,11 @@ class BatchRepository(BaseRepository[Batch]):
                     active_jobs = [
                         j for j in jobs 
                         if j.configuration_id == config.id 
-                        and j.status in constants.JobStatus.ACTIVE_STATUSES
+                        and j.status in [constants.JobStatus.PENDING.value,
+                                         constants.JobStatus.SUBMITTED.value, 
+                                         constants.JobStatus.QUEUED.value,
+                                         constants.JobStatus.RUNNING.value,                                    
+                                         ]
                     ]
                     
                     if active_jobs:
