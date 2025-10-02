@@ -43,28 +43,17 @@ wait_for_service "Redis" "redis" "6379"
 # Additional wait for database to be fully ready
 sleep 3
 
-# Run database migrations if needed
+# Run database initialization if needed
 echo "Running database initialization..."
 python -c "
 from src.db.session import init_db
-from src.db.migrate_phase1 import migrate, verify
 import logging
+import os
 logging.basicConfig(level=logging.INFO)
 
 try:
     init_db()
-    print('✓ Database tables initialized')
-    
-    # Run Phase 1 migration
-    try:
-        migrate()
-        if verify():
-            print('✓ Phase 1 migration completed successfully')
-        else:
-            print('⚠ Phase 1 migration verification failed, but continuing...')
-    except Exception as e:
-        print(f'⚠ Phase 1 migration already applied or error: {e}')
-        
+    print('✓ Database tables initialized')        
 except Exception as e:
     print(f'ERROR: Database initialization failed: {e}')
     exit(1)
