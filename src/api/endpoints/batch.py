@@ -66,8 +66,9 @@ def create_batch(
         # Get the created batch
         repo = BatchRepository(db)
         print(f"Fetching batch with ID: {result['batch_id']}")  # Debugging line
-        print(f"Batch summary: {repo.get_batch_summary(result['batch_id'])}")  # Debugging line
-        return repo.get_batch_summary(result["batch_id"])
+        summary = repo.get_batch_summary(result["batch_id"])
+        print(f"Batch summary: {summary}")  # Debugging line
+        return summary
         
     except Exception as e:
         raise HTTPException(
@@ -94,6 +95,34 @@ def get_batch(
     return summary
 
 
+@router.get("/{batch_id}/history")
+def get_batch_history(
+    batch_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Get batch status history."""
+    repo = BatchRepository(db)
+    
+    # Check if batch exists
+    batch = repo.get(batch_id)
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {batch_id} not found"
+        )
+    
+    history = repo.get_batch_history(batch_id, limit)
+    
+    return {
+        "batch_id": batch_id,
+        "batch_name": batch.name,
+        "current_status": batch.status,
+        "history_count": len(history),
+        "history": history
+    }
+
+
 @router.delete("/{batch_id}", 
                status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(verify_api_key)])
@@ -101,7 +130,7 @@ def delete_batch(
     batch_id: int,
     db: Session = Depends(get_db)
 ):
-    """Delete an batch and all related data."""
+    """Delete a batch and all related data."""
     repo = BatchRepository(db)
     
     if not repo.delete(batch_id):
@@ -118,7 +147,7 @@ def submit_batch_jobs(
     batch_id: int,
     db: Session = Depends(get_db)
 ):
-    """Submit all jobs for an batch."""
+    """Submit all jobs for a batch."""
     orchestrator = Orchestrator()
     
     try:
@@ -137,7 +166,7 @@ def cancel_batch(
     batch_id: int,
     db: Session = Depends(get_db)
 ):
-    """Cancel an batch and all its jobs."""
+    """Cancel a batch and all its jobs."""
     orchestrator = Orchestrator()
     
     try:
@@ -155,7 +184,7 @@ def get_batch_progress(
     batch_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get detailed progress of an batch."""
+    """Get detailed progress of a batch."""
     orchestrator = Orchestrator()
     
     try:
@@ -166,3 +195,33 @@ def get_batch_progress(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+
+@router.post("/{batch_id}/check", 
+             dependencies=[Depends(verify_api_key)])
+def force_batch_check(
+    batch_id: int,
+    db: Session = Depends(get_db)
+):
+    """Force an immediate check of batch completion status."""
+    from src.tasks.batch_tasks import check_batch_completion
+    
+    repo = BatchRepository(db)
+    batch = repo.get(batch_id)
+    
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {batch_id} not found"
+        )
+    
+    # Trigger immediate batch check
+    task = check_batch_completion.delay(batch_id)
+    
+    return {
+        "batch_id": batch_id,
+        "batch_name": batch.name,
+        "current_status": batch.status,
+        "task_id": task.id,
+        "message": "Batch check triggered"
+    }

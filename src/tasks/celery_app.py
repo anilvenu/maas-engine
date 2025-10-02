@@ -72,6 +72,7 @@ celery.conf.beat_schedule = {
     'check-batch-completion': {
         'task': 'src.tasks.batch_tasks.check_all_batch',
         'schedule': crontab(minute='*/2'),  # Every 2 minutes
+        'options': {'queue': 'default'}
     },
     'recovery-check': {
         'task': 'src.tasks.recovery_tasks.perform_recovery_check',
@@ -81,7 +82,7 @@ celery.conf.beat_schedule = {
     },
     'orphan-detection': {
         'task': 'src.tasks.recovery_tasks.detect_orphan_jobs',
-        'schedule': crontab(minute='*/2'),  # Every 2 minutes
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {'queue': 'recovery'}
     },
 }

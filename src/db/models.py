@@ -27,7 +27,8 @@ class Batch(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text)
 
-    status = Column(Enum(*ALL_STATUSES),default="pending", nullable=False)
+    # Fixed: Added name parameter for PostgreSQL ENUM
+    status = Column(Enum(*ALL_STATUSES, name='batch_status_enum'), default="pending", nullable=False)
 
     yaml_config = Column(JSON)
     created_ts = Column(DateTime(timezone=True), server_default=func.now())
@@ -191,9 +192,6 @@ class JobStatus(Base):
         return f"<JobStatus(id={self.id}, job_id={self.job_id}, status={self.status})>"
 
 
-
-
-
 class RetryHistory(Base):
     """Retry history model."""
     __tablename__ = "irp_retry_history"
@@ -223,8 +221,8 @@ class SystemRecovery(Base):
     """System recovery tracking model."""
     __tablename__ = "irp_system_recovery"
     
-    id = Column(Integer, primary_key=True)
-    recovery_type = Column(Enum(constants.RecoveryType), nullable=False)
+    id = Column(Integer, primary_key=True)   
+    recovery_type = Column(Enum(constants.RecoveryType, name='recovery_type_enum'), nullable=False)
     jobs_recovered = Column(Integer, default=0)
     jobs_resubmitted = Column(Integer, default=0)
     jobs_resumed_polling = Column(Integer, default=0)
